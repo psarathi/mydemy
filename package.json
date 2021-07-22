@@ -17,5 +17,11 @@
     "eslint": "7.31.0",
     "eslint-config-next": "11.0.1",
     "prettier": "^2.3.2"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "jsxSingleQuote": true,
+    "bracketSpacing": false,
+    "tabWidth": 4
   }
 }
