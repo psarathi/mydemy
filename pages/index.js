@@ -1,4 +1,5 @@
 import {promises as fs} from 'fs';
+import Image from 'next/image';
 import path from 'path';
 import Landing from '../components/layout/Landing';
 import styles from '../styles/Home.module.css';
@@ -6,6 +7,7 @@ import styles from '../styles/Home.module.css';
 export default function Home({files}) {
     return (
         <div className={styles.container}>
+            <Image src='/vercel.svg' alt='me' width='64' height='64' />
             <Landing files={files} />
         </div>
     );
