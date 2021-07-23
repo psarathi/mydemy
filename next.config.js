@@ -8,7 +8,7 @@ module.exports = (phase, {defaultConfig}) => {
     if (phase !== PHASE_DEVELOPMENT_SERVER) {
         return {
             reactStrictMode: true,
-            // basePath: '/mydemy',
+            basePath: '/mydemy',
             assetPrefix: '/mydemy',
         };
     }
