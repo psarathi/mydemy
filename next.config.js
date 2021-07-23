@@ -6,7 +6,7 @@ module.exports = (phase, {defaultConfig}) => {
         return {
             reactStrictMode: true,
             basePath: BASE_PATH,
-            assetPrefix: `${BASE_PATH}/`,
+            assetPrefix: BASE_PATH,
         };
     }
 };
