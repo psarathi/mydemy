@@ -2,12 +2,18 @@ import {promises as fs} from 'fs';
 import Image from 'next/image';
 import path from 'path';
 import Landing from '../components/layout/Landing';
+import {BASE_PATH} from '../constants';
 import styles from '../styles/Home.module.css';
 
 export default function Home({files}) {
     return (
         <div className={styles.container}>
-            <Image src='/mydemy/vercel.svg' alt='me' width='64' height='64' />
+            <Image
+                src={`${BASE_PATH}/vercel.svg`}
+                alt='me'
+                width='64'
+                height='64'
+            />
             <Landing files={files} />
         </div>
     );
