@@ -1,1 +1,1 @@
-export const BASE_PATH = '/mydemy';
+exports.BASE_PATH = '/mydemy';
