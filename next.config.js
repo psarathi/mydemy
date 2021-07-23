@@ -9,7 +9,7 @@ module.exports = (phase, {defaultConfig}) => {
         return {
             reactStrictMode: true,
             basePath: '/mydemy',
-            assetPrefix: '/mydemy',
+            assetPrefix: '/mydemy/',
         };
     }
 };
