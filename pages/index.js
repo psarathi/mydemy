@@ -7,7 +7,7 @@ import styles from '../styles/Home.module.css';
 export default function Home({files}) {
     return (
         <div className={styles.container}>
-            <Image src='/vercel.svg' alt='me' width='64' height='64' />
+            <Image src='vercel.svg' alt='me' width='64' height='64' />
             <Landing files={files} />
         </div>
     );
