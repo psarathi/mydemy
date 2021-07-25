@@ -12,8 +12,6 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         setCurrentSubtitle(nextVideo.subtitles);
         vp.current.load();
         vp.current.play();
-        vp.current.textTracks[0].src = `${BASE_PATH}/${currentSubtitle}`;
-        vp.current.textTracks[0].mode = 'showing';
     }
     const addTrack = () => {
         let track = document.createElement("track");
@@ -30,7 +28,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     return (
         <video controls width="750px" height="375px" autoPlay onEnded={endHandler} ref={vp} onLoadedMetadata={addTrack}>
             <source src={`${BASE_PATH}/${currentVideo}`} />
-            <track src={`${BASE_PATH}/${currentSubtitle}`} label="English subtitles" kind="captions" srcLang="en-us" default />
+            {/*<track src={`${BASE_PATH}/${currentSubtitle}`} label="English subtitles" kind="captions" srcLang="en-us" default />*/}
         </video>
     );
 }
