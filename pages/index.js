@@ -17,7 +17,6 @@ export default function Home({filenames}) {
             <video controls width="100%" autoPlay>
                 <source src={`${BASE_PATH}/sample.mp4`} />
                 <track src={`${BASE_PATH}/sample.vtt`} label="English subtitles" kind="captions" srcLang="en-us" default />
-                Sorry, your browser doesn't support embedded videos.
             </video>
             <Landing files={filenames} />
         </div>
