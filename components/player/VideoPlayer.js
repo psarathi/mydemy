@@ -12,6 +12,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         setCurrentSubtitle(nextVideo.subtitles);
         vp.current.load();
         vp.current.play();
+        vp.current.textTracks[0].src = `${BASE_PATH}/${currentSubtitle}`;
         vp.current.textTracks[0].mode = 'showing';
     }
     return (
