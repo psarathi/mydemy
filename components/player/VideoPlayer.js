@@ -7,6 +7,8 @@ function VideoPlayer({videoFile, subtitlesFile, setNextVideo}) {
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const endHandler = ()=>{
         setNextVideo();
+        setCurrentVideo(videoFile);
+        setCurrentSubtitle(subtitlesFile);
         vp.load();
         vp.play();
     }
