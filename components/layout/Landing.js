@@ -10,11 +10,11 @@ function Landing({files}) {
     const [currentVideo, setCurrentVideo] = useState(videoList[0]);
     const handleEnded = () => {
         // alert('Playing next video in 5 seconds...');
-        setCurrentVideo(videoList[1]);
+        return (videoList[1]);
     };
     return (
         <div>
-            <VideoPlayer videoFile={currentVideo.name} subtitlesFile={currentVideo.subtitles} setNextVideo={handleEnded}/>
+            <VideoPlayer videoFile={currentVideo.name} subtitlesFile={currentVideo.subtitles} getNextVideo={handleEnded}/>
             <ul>
                 {files.map((file, i) => (
                     <li key={i}>
