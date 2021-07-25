@@ -1,11 +1,19 @@
-import React from 'react';
+import React, {useRef, useState} from 'react';
 import {BASE_PATH} from '../../constants';
 
-function VideoPlayer({videoFile, subtitlesFile, endHandler}) {
+function VideoPlayer({videoFile, subtitlesFile, setNextVideo}) {
+    const vp = useRef(null);
+    const [currentVideo, setCurrentVideo] = useState(videoFile);
+    const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
+    const endHandler = ()=>{
+        setNextVideo();
+        vp.load();
+        vp.play();
+    }
     return (
-        <video controls width="750px" height="375px" autoPlay onEnded={endHandler}>
-            <source src={`${BASE_PATH}/${videoFile}`} />
-            <track src={`${BASE_PATH}/${subtitlesFile}`} label="English subtitles" kind="captions" srcLang="en-us" default />
+        <video controls width="750px" height="375px" autoPlay onEnded={endHandler} ref={vp}>
+            <source src={`${BASE_PATH}/${currentVideo}`} />
+            <track src={`${BASE_PATH}/${currentSubtitle}`} label="English subtitles" kind="captions" srcLang="en-us" default />
         </video>
     );
 }

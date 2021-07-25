@@ -14,7 +14,7 @@ function Landing({files}) {
     };
     return (
         <div>
-            <VideoPlayer videoFile={currentVideo.name} subtitlesFile={currentVideo.subtitles} endHandler={handleEnded}/>
+            <VideoPlayer videoFile={currentVideo.name} subtitlesFile={currentVideo.subtitles} setNextVideo={handleEnded}/>
             <ul>
                 {files.map((file, i) => (
                     <li key={i}>
