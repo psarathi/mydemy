@@ -14,7 +14,7 @@ export default function Home({filenames}) {
                 width='64'
                 height='64'
             />
-            <video controls width="50vw" height="25vh" autoPlay>
+            <video controls width="750px" height="375px" autoPlay>
                 <source src={`${BASE_PATH}/sample.mp4`} />
                 <track src={`${BASE_PATH}/sample.vtt`} label="English subtitles" kind="captions" srcLang="en-us" default />
             </video>
