@@ -7,10 +7,10 @@ function Landing({files}) {
         {name: 'sample.mp4', subtitles: 'sample.vtt'},
         {name: 'sample2.mp4', subtitles: 'sample2.vtt'}
     ];
-    const [currentVideo, setCurrentVideo] = useState(videoList[0]);
+    const [currentVideo, setCurrentVideo] = useState(videoList[1]);
     const handleEnded = () => {
         // alert('Playing next video in 5 seconds...');
-        return (videoList[1]);
+        return (videoList[0]);
     };
     return (
         <div>
