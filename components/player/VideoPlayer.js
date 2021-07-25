@@ -14,6 +14,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         vp.current.play();
     }
     const addTrack = () => {
+        let existingTrack = vp.current.getElementsByTagName("track")[0];
+        if (existingTrack) {
+            existingTrack.remove();
+        }
         let track = document.createElement("track");
         track.kind = "captions";
         track.label = "English";
