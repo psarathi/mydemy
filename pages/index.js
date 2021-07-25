@@ -6,6 +6,9 @@ import {BASE_PATH} from '../constants';
 import styles from '../styles/Home.module.css';
 
 export default function Home({filenames}) {
+    const handleEnded = (event)=>{
+        alert('Playing next video in 5 seconds...');
+    };
     return (
         <div className={styles.container}>
             <Image
@@ -14,7 +17,7 @@ export default function Home({filenames}) {
                 width='64'
                 height='64'
             />
-            <video controls width="750px" height="375px" autoPlay>
+            <video controls width="750px" height="375px" autoPlay onEnded={handleEnded}>
                 <source src={`${BASE_PATH}/sample.mp4`} />
                 <track src={`${BASE_PATH}/sample.vtt`} label="English subtitles" kind="captions" srcLang="en-us" default />
             </video>
