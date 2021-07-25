@@ -10,6 +10,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         console.log(nextVideo);
         setCurrentVideo(nextVideo.name);
         setCurrentSubtitle(nextVideo.subtitles);
+        vp.current.textTracks[0].mode = 'showing';
         vp.current.load();
         vp.current.play();
     }
