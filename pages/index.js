@@ -5,7 +5,7 @@ import Landing from '../components/layout/Landing';
 import {BASE_PATH} from '../constants';
 import styles from '../styles/Home.module.css';
 
-export default function Home({files}) {
+export default function Home({filenames}) {
     return (
         <div className={styles.container}>
             <Image
@@ -14,28 +14,24 @@ export default function Home({files}) {
                 width='64'
                 height='64'
             />
-            <Landing files={files} />
+            <Landing files={filenames} />
         </div>
     );
 }
 
 export async function getStaticProps() {
     const currentDirectory = path.join(process.cwd(), 'public');
-    console.log(currentDirectory);
     const filenames = await fs.readdir(currentDirectory);
-
-    const files = filenames.map((filename) => {
+    filenames.map((filename) => {
         const filePath = path.join(currentDirectory, filename);
 
         return {
             filePath,
         };
     });
-    // By returning { props: { posts } }, the Blog component
-    // will receive `posts` as a prop at build time
     return {
         props: {
-            files,
+            filenames,
         },
         revalidate: 10,
     };
