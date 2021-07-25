@@ -18,6 +18,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         track.kind = "captions";
         track.label = "English";
         track.srclang = "en";
+        track.default = true;
         track.src = `${BASE_PATH}/${currentSubtitle}`;
         track.addEventListener("load", function() {
             this.mode = "showing";
