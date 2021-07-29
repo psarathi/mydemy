@@ -5,33 +5,41 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
-    const endHandler = ()=>{
+    const endHandler = () => {
         const nextVideo = getNextVideo();
         console.log(nextVideo);
         setCurrentVideo(nextVideo.name);
         setCurrentSubtitle(nextVideo.subtitles);
         vp.current.load();
         vp.current.play();
-    }
+    };
     const addTrack = () => {
-        let existingTrack = vp.current.getElementsByTagName("track")[0];
+        let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
         }
-        let track = document.createElement("track");
-        track.kind = "captions";
-        track.label = "English";
-        track.srclang = "en";
+        let track = document.createElement('track');
+        track.kind = 'captions';
+        track.label = 'English';
+        track.srclang = 'en';
         track.src = `${BASE_PATH}/${currentSubtitle}`;
-        track.addEventListener("load", function() {
-            this.mode = "showing";
-            vp.current.textTracks[0].mode = "showing"; // thanks Firefox
+        track.addEventListener('load', function () {
+            this.mode = 'showing';
+            vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
         });
         track.default = true;
         vp.current.appendChild(track);
-    }
+    };
     return (
-        <video controls width="750px" height="375px" autoPlay onEnded={endHandler} ref={vp} onLoadedMetadata={addTrack}>
+        <video
+            controls
+            width='750px'
+            height='375px'
+            autoPlay
+            onEnded={endHandler}
+            ref={vp}
+            onLoadedMetadata={addTrack}
+        >
             <source src={`${BASE_PATH}/${currentVideo}`} />
             {/*<track src={`${BASE_PATH}/${currentSubtitle}`} label="English subtitles" kind="captions" srcLang="en-us" default />*/}
         </video>
