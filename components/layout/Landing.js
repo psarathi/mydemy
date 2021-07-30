@@ -1,25 +1,30 @@
 import Link from 'next/link';
 import React, {useState} from 'react';
-import VideoPlayer from '../player/VideoPlayer';
+import courses from '../../courses.json';
 
-function Landing({files}) {
+function Landing() {
     const videoList = [
         {name: 'sample.mp4', subtitles: 'sample.vtt'},
-        {name: 'sample2.mp4', subtitles: 'sample2.vtt'}
+        {name: 'sample2.mp4', subtitles: 'sample2.vtt'},
     ];
     const [currentVideo, setCurrentVideo] = useState(videoList[1]);
     const handleEnded = () => {
         // alert('Playing next video in 5 seconds...');
-        return (videoList[0]);
+        return videoList[0];
     };
     return (
         <div>
-            <VideoPlayer videoFile={currentVideo.name} subtitlesFile={currentVideo.subtitles} getNextVideo={handleEnded}/>
+            {/*<VideoPlayer*/}
+            {/*    videoFile={currentVideo.name}*/}
+            {/*    subtitlesFile={currentVideo.subtitles}*/}
+            {/*    getNextVideo={handleEnded}*/}
+            {/*/>*/}
+            <h2>List of courses:</h2>
             <ul>
-                {files.map((file, i) => (
+                {courses.map((course, i) => (
                     <li key={i}>
-                        <Link href={`/${file}`}>
-                            <a>{file}</a>
+                        <Link href={`/${course.name}`}>
+                            <a>{course.name}</a>
                         </Link>
                     </li>
                 ))}
