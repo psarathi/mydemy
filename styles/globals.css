@@ -54,13 +54,11 @@ a {
 
 .videoFile {
     border-bottom: 1px solid gray;
-    padding: 1em 0;
+    padding: 1em 0.5em;
     width: 100%;
 }
 
 .videoFile:hover {
     background-color: mediumpurple;
-    border-bottom: 1px solid gray;
     color: #eaeaea;
-    padding: 1em 0;
 }
