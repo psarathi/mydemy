@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Landing from '../components/layout/Landing';
-import {BASE_PATH} from '../constants';
 import styles from '../styles/Home.module.css';
+
+const BASE_PATH = require('../next.config')().basePath;
 
 export default function Home() {
     return (
