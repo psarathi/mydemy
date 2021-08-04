@@ -6,7 +6,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
-    console.log(currentSubtitle);
+
     const endHandler = () => {
         const nextVideo = getNextVideo();
         console.log(nextVideo);
@@ -15,8 +15,8 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         vp.current.load();
         vp.current.play();
     };
+
     const addTrack = () => {
-        console.log('addTrack is called...');
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
