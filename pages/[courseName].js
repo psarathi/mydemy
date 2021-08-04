@@ -5,6 +5,13 @@ import courses from '../courses.json';
 
 function CourseName({courseName}) {
     const course = courses.find((c) => c.name === courseName);
+    const videoFileList = course
+        ? course.topics.flatMap((t) => {
+              return t.files
+                  .filter((f) => f.ext === '.mp4')
+                  .map((f) => f.fileName);
+          })
+        : [];
     return course ? (
         <div className='courseWrapper'>
             <div className='courseListings'>
