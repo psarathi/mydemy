@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
+import VideoPlayer from '../components/player/VideoPlayer';
 import {COURSE_PATH} from '../constants';
 import courses from '../courses.json';
 
@@ -9,9 +10,23 @@ function CourseName({courseName}) {
         ? course.topics.flatMap((t) => {
               return t.files
                   .filter((f) => f.ext === '.mp4')
-                  .map((f) => f.fileName);
+                  .map(
+                      (f) =>
+                          `${COURSE_PATH}/${course.name}/${t.name}/${f.fileName}`
+                  );
           })
         : [];
+    let currentVideoFileIndex = 0;
+    const getNextVideo = () => {
+        currentVideoFileIndex += 1;
+        return {
+            name: videoFileList[currentVideoFileIndex],
+            subtitles: videoFileList[currentVideoFileIndex].replace(
+                'mp4',
+                'vtt'
+            ),
+        };
+    };
     return course ? (
         <div className='courseWrapper'>
             <div className='courseListings'>
@@ -37,7 +52,16 @@ function CourseName({courseName}) {
                     ))}
                 </ul>
             </div>
-            <div className='videoPlayer'>Video player coming soon...</div>
+            <div className='videoPlayer'>
+                <VideoPlayer
+                    videoFile={videoFileList[currentVideoFileIndex]}
+                    subtitlesFile={videoFileList[currentVideoFileIndex].replace(
+                        'mp4',
+                        'vtt'
+                    )}
+                    getNextVideo={getNextVideo}
+                />
+            </div>
         </div>
     ) : (
         <div>{`${courseName} is not a valid course name`}</div>

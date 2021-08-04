@@ -1,10 +1,12 @@
-import React, {useRef, useState} from 'react';
-import {BASE_PATH} from '../../constants';
+import React, {useEffect, useRef, useState} from 'react';
+
+const BASE_PATH = process.env.basePath;
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
+    console.log(currentSubtitle);
     const endHandler = () => {
         const nextVideo = getNextVideo();
         console.log(nextVideo);
@@ -14,6 +16,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         vp.current.play();
     };
     const addTrack = () => {
+        console.log('addTrack is called...');
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
@@ -30,6 +33,12 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         track.default = true;
         vp.current.appendChild(track);
     };
+
+    useEffect(() => {
+        //due to some reason, the onLoadStart is not being called when the page loads, hence this effect
+        addTrack();
+    });
+
     return (
         <video
             controls
@@ -38,10 +47,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
             autoPlay
             onEnded={endHandler}
             ref={vp}
-            onLoadedMetadata={addTrack}
+            // onLoadedMetadata={addTrack}
+            onLoadStart={addTrack}
         >
             <source src={`${BASE_PATH}/${currentVideo}`} />
-            {/*<track src={`${BASE_PATH}/${currentSubtitle}`} label="English subtitles" kind="captions" srcLang="en-us" default />*/}
         </video>
     );
 }
