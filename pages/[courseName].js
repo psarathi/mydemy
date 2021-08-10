@@ -101,9 +101,9 @@ export async function getStaticPaths() {
     return {
         paths: courses.map((c) => ({
             params: {
-                courseName: c.ne,
+                courseName: c.name,
             },
         })),
-        fallback: te,
+        fallback: true,
     };
 }
