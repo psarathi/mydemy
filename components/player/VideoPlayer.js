@@ -76,12 +76,11 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
 
     return (
         <>
-            <div>{`${getVideoName()} ${videoDuration}`}</div>
+            <div className='fileName'>{`${getVideoName()} ${videoDuration}`}</div>
             <br />
             <video
+                className='player'
                 controls
-                width='750px'
-                height='375px'
                 autoPlay
                 onEnded={() => endHandler()}
                 ref={vp}

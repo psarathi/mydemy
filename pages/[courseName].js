@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React, {useEffect, useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {COURSE_PATH} from '../constants';
@@ -66,7 +67,14 @@ function CourseName({courseName}) {
     return course ? (
         <div className='courseWrapper'>
             <div className='courseListings'>
-                <div className='courseName'>{courseName}</div>
+                <div className='courseName'>
+                    <div className='backButton'>
+                        <Link href='/'>
+                            <a>&#8592; All Courses</a>
+                        </Link>
+                    </div>
+                    <div className='courseTitle'>{courseName}</div>
+                </div>
                 <ul>
                     {course.topics.map((topic, i) => (
                         <li key={i} className='topicName'>
@@ -78,6 +86,8 @@ function CourseName({courseName}) {
                                         <li
                                             key={i}
                                             className={`videoFile ${
+                                                i === 0 ? 'firstItem' : ''
+                                            } ${
                                                 file.fileName === currentVideo
                                                     ? 'playing'
                                                     : ''
