@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import React from 'react';
+import React, {useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {COURSE_PATH} from '../constants';
 import courses from '../courses.json';
@@ -16,17 +15,35 @@ function CourseName({courseName}) {
                   );
           })
         : [];
-    let currentVideoFileIndex = 0;
+    const [currentVideoFileIndex, setCurrentVideoFileIndex] = useState(0);
+    const [videoFile, setVideoFile] = useState(videoFileList[0]);
+    const [subtitlesFile, setSubtitlesFile] = useState(
+        videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
+    );
     const getNextVideo = () => {
-        currentVideoFileIndex += 1;
+        setCurrentVideoFileIndex(
+            (currentVideoFileIndex) => currentVideoFileIndex + 1
+        );
+        if (currentVideoFileIndex >= videoFileList.length) {
+            setCurrentVideoFileIndex(0);
+        }
+        let index =
+            currentVideoFileIndex + 1 >= videoFileList.length
+                ? 0
+                : currentVideoFileIndex + 1;
         return {
-            name: videoFileList[currentVideoFileIndex],
-            subtitles: videoFileList[currentVideoFileIndex].replace(
-                'mp4',
-                'vtt'
-            ),
+            name: videoFileList[index],
+            subtitles: videoFileList[index].replace('mp4', 'vtt'),
         };
     };
+
+    const playSelectedVideo = (fileName) => {
+        const index = videoFileList.indexOf(fileName);
+        setVideoFile(videoFileList[index]);
+        setSubtitlesFile(videoFileList[index].replace('mp4', 'vtt'));
+        setCurrentVideoFileIndex(index);
+    };
+
     return course ? (
         <div className='courseWrapper'>
             <div className='courseListings'>
@@ -39,12 +56,16 @@ function CourseName({courseName}) {
                                 {topic.files
                                     .filter((f) => f.ext === '.mp4')
                                     .map((file, i) => (
-                                        <li key={i} className='videoFile'>
-                                            <Link
-                                                href={`/${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`}
-                                            >
-                                                <a>{file.name}</a>
-                                            </Link>
+                                        <li
+                                            key={i}
+                                            className='videoFile'
+                                            onClick={(e) =>
+                                                playSelectedVideo(
+                                                    `${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`
+                                                )
+                                            }
+                                        >
+                                            {file.name}
                                         </li>
                                     ))}
                             </ul>
@@ -54,11 +75,8 @@ function CourseName({courseName}) {
             </div>
             <div className='videoPlayer'>
                 <VideoPlayer
-                    videoFile={videoFileList[currentVideoFileIndex]}
-                    subtitlesFile={videoFileList[currentVideoFileIndex].replace(
-                        'mp4',
-                        'vtt'
-                    )}
+                    videoFile={videoFile}
+                    subtitlesFile={subtitlesFile}
                     getNextVideo={getNextVideo}
                 />
             </div>
@@ -70,10 +88,10 @@ function CourseName({courseName}) {
 
 export default CourseName;
 
-export async function getStaticProps({params}) {
+export async function getStaticProps({params: {courseName}}) {
     return {
         props: {
-            courseName: params.courseName,
+            courseName,
         },
         revalidate: 3600 * 24,
     };
@@ -81,13 +99,11 @@ export async function getStaticProps({params}) {
 
 export async function getStaticPaths() {
     return {
-        paths: courses.map((c) => {
-            return {
-                params: {
-                    courseName: c.name,
-                },
-            };
-        }),
-        fallback: true,
+        paths: courses.map((c) => ({
+            params: {
+                courseName: c.ne,
+            },
+        })),
+        fallback: te,
     };
 }

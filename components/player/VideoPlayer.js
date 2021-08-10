@@ -6,17 +6,24 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
+    const [videoDuration, setVideoDuration] = useState('');
 
-    const endHandler = () => {
-        const nextVideo = getNextVideo();
-        console.log(nextVideo);
-        setCurrentVideo(nextVideo.name);
-        setCurrentSubtitle(nextVideo.subtitles);
+    const endHandler = (userSelected = false) => {
+        let vf = videoFile,
+            sf = subtitlesFile;
+        if (!userSelected) {
+            const nextVideo = getNextVideo();
+            vf = nextVideo.name;
+            sf = nextVideo.subtitles;
+        }
+        setCurrentVideo(vf);
+        setCurrentSubtitle(sf);
         vp.current.load();
         vp.current.play();
     };
 
     const addTrack = () => {
+        // getVideoDuration();
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
@@ -32,6 +39,16 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         });
         track.default = true;
         vp.current.appendChild(track);
+        vp.current.textTracks[0].mode = 'showing';
+    };
+
+    const getVideoName = () => {
+        const pathParts = currentVideo.split('/');
+        let duration = '';
+        return `${pathParts[pathParts.length - 1].replace(
+            '.mp4',
+            ''
+        )} ${duration}`;
     };
 
     useEffect(() => {
@@ -39,19 +56,41 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         addTrack();
     });
 
+    useEffect(() => {
+        setCurrentVideo(videoFile);
+        setCurrentSubtitle(subtitlesFile);
+        endHandler(true);
+    }, [videoFile, subtitlesFile]);
+
+    const getVideoDuration = () => {
+        if (vp.current.duration) {
+            setVideoDuration(
+                `(${Math.floor(vp.current.duration / 60)}:${Math.round(
+                    vp.current.duration % 60
+                )
+                    .toString()
+                    .padStart(2, '0')})`
+            );
+        }
+    };
+
     return (
-        <video
-            controls
-            width='750px'
-            height='375px'
-            autoPlay
-            onEnded={endHandler}
-            ref={vp}
-            // onLoadedMetadata={addTrack}
-            onLoadStart={addTrack}
-        >
-            <source src={`${BASE_PATH}/${currentVideo}`} />
-        </video>
+        <>
+            <div>{`${getVideoName()} ${videoDuration}`}</div>
+            <br />
+            <video
+                controls
+                width='750px'
+                height='375px'
+                autoPlay
+                onEnded={() => endHandler()}
+                ref={vp}
+                onLoadStart={addTrack}
+                onLoadedMetadata={getVideoDuration}
+            >
+                <source src={`${BASE_PATH}/${currentVideo}`} />
+            </video>
+        </>
     );
 }
 

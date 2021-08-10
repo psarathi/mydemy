@@ -21,7 +21,10 @@ a {
     font-weight: bold;
     min-height: 3em;
     padding: 0.75em 0;
+    position: -webkit-sticky;
+    position: sticky;
     text-align: center;
+    top: 0;
 }
 
 .courseWrapper {
@@ -32,6 +35,8 @@ a {
 
 .courseListings {
     border-right: 1px solid darkgray;
+    height: 100vh;
+    overflow: scroll;
 }
 
 .courseListings ul {
