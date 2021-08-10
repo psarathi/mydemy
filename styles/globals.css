@@ -67,3 +67,9 @@ a {
     background-color: mediumpurple;
     color: #eaeaea;
 }
+
+.playing {
+    background-color: lightgreen;
+    border: 1px dashed fuchsia;
+    color: fuchsia;
+}

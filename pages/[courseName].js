@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {COURSE_PATH} from '../constants';
 import courses from '../courses.json';
@@ -19,6 +19,21 @@ function CourseName({courseName}) {
     const [videoFile, setVideoFile] = useState(videoFileList[0]);
     const [subtitlesFile, setSubtitlesFile] = useState(
         videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
+    );
+    const getVideoFileNameAtGivenIndex = (index = 0) => {
+        if (!videoFileList || !videoFileList.length) {
+            return '';
+        }
+        if (index > videoFileList.length - 1) {
+            index = 0;
+        }
+        const filePathParts = videoFileList[index].split('/');
+        return filePathParts.length
+            ? filePathParts[filePathParts.length - 1]
+            : '';
+    };
+    const [currentVideo, setCurrentVideo] = useState(
+        getVideoFileNameAtGivenIndex(0)
     );
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
@@ -44,6 +59,10 @@ function CourseName({courseName}) {
         setCurrentVideoFileIndex(index);
     };
 
+    useEffect(() => {
+        setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
+    }, [currentVideoFileIndex]);
+
     return course ? (
         <div className='courseWrapper'>
             <div className='courseListings'>
@@ -58,7 +77,11 @@ function CourseName({courseName}) {
                                     .map((file, i) => (
                                         <li
                                             key={i}
-                                            className='videoFile'
+                                            className={`videoFile ${
+                                                file.fileName === currentVideo
+                                                    ? 'playing'
+                                                    : ''
+                                            }`}
                                             onClick={(e) =>
                                                 playSelectedVideo(
                                                     `${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`
