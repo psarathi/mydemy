@@ -77,8 +77,10 @@ function CourseName({courseName}) {
                 </div>
                 <ul>
                     {course.topics.map((topic, i) => (
-                        <li key={i} className='topicName'>
-                            <strong>{topic.name}</strong>
+                        <>
+                            <div key={i} className='topicName'>
+                                <strong>{topic.name}</strong>
+                            </div>
                             <ul>
                                 {topic.files
                                     .filter((f) => f.ext === '.mp4')
@@ -102,7 +104,7 @@ function CourseName({courseName}) {
                                         </li>
                                     ))}
                             </ul>
-                        </li>
+                        </>
                     ))}
                 </ul>
             </div>

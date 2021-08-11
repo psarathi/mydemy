@@ -55,7 +55,13 @@ a {
 }
 
 .topicName {
+    background: mediumpurple;
+    height: 5em;
     margin-bottom: 1em;
+    padding: 1.5em;
+    position: sticky;
+    text-align: center;
+    top: 100px;
 }
 
 .fileName {
