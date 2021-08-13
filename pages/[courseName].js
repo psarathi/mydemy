@@ -21,6 +21,7 @@ function CourseName({courseName}) {
     const [subtitlesFile, setSubtitlesFile] = useState(
         videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
     );
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
             return '';
@@ -64,56 +65,92 @@ function CourseName({courseName}) {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
     }, [currentVideoFileIndex]);
 
+    const collapseSideBar = () => {
+        setIsSidebarCollapsed(true);
+    };
+
+    const openSidebar = () => {
+        setIsSidebarCollapsed(false);
+    };
+
     return course ? (
-        <div className='courseWrapper'>
-            <div className='courseListings'>
-                <div className='courseName'>
-                    <div className='backButton'>
-                        <Link href='/'>
-                            <a>&#8592; All Courses</a>
-                        </Link>
+        <div className='courseContainer'>
+            <div
+                className={
+                    isSidebarCollapsed
+                        ? 'courseWrapper collapsedSidebar'
+                        : 'courseWrapper'
+                }
+            >
+                {isSidebarCollapsed && (
+                    <div className='openSidebar' onClick={openSidebar}>
+                        &#8594;
                     </div>
-                    <div className='courseTitle'>{courseName}</div>
-                </div>
-                <ul>
-                    {course.topics.map((topic, i) => (
-                        <>
-                            <div key={i} className='topicName'>
-                                <strong>{topic.name}</strong>
+                )}
+                <div
+                    className={
+                        isSidebarCollapsed
+                            ? 'courseListings hideContents'
+                            : 'courseListings'
+                    }
+                >
+                    <div className='courseName'>
+                        <div className='navMenu'>
+                            <div className='backButton'>
+                                <Link href='/'>
+                                    <a>&#8592; All Courses</a>
+                                </Link>
                             </div>
-                            <ul>
-                                {topic.files
-                                    .filter((f) => f.ext === '.mp4')
-                                    .map((file, i) => (
-                                        <li
-                                            key={i}
-                                            className={`videoFile ${
-                                                i === 0 ? 'firstItem' : ''
-                                            } ${
-                                                file.fileName === currentVideo
-                                                    ? 'playing'
-                                                    : ''
-                                            }`}
-                                            onClick={(e) =>
-                                                playSelectedVideo(
-                                                    `${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`
-                                                )
-                                            }
-                                        >
-                                            {file.name}
-                                        </li>
-                                    ))}
-                            </ul>
-                        </>
-                    ))}
-                </ul>
-            </div>
-            <div className='videoPlayer'>
-                <VideoPlayer
-                    videoFile={videoFile}
-                    subtitlesFile={subtitlesFile}
-                    getNextVideo={getNextVideo}
-                />
+                            <div
+                                className='closeSidebar'
+                                onClick={collapseSideBar}
+                            >
+                                &#10539;
+                            </div>
+                        </div>
+                        <div className='courseTitle'>{courseName}</div>
+                    </div>
+                    <ul>
+                        {course.topics.map((topic, i) => (
+                            <>
+                                <div key={i} className='topicName'>
+                                    <strong>{topic.name}</strong>
+                                </div>
+                                <ul>
+                                    {topic.files
+                                        .filter((f) => f.ext === '.mp4')
+                                        .map((file, i) => (
+                                            <li
+                                                key={i}
+                                                className={`videoFile ${
+                                                    i === 0 ? 'firstItem' : ''
+                                                } ${
+                                                    file.fileName ===
+                                                    currentVideo
+                                                        ? 'playing'
+                                                        : ''
+                                                }`}
+                                                onClick={(e) =>
+                                                    playSelectedVideo(
+                                                        `${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`
+                                                    )
+                                                }
+                                            >
+                                                {file.name}
+                                            </li>
+                                        ))}
+                                </ul>
+                            </>
+                        ))}
+                    </ul>
+                </div>
+                <div className='videoPlayer'>
+                    <VideoPlayer
+                        videoFile={videoFile}
+                        subtitlesFile={subtitlesFile}
+                        getNextVideo={getNextVideo}
+                    />
+                </div>
             </div>
         </div>
     ) : (
