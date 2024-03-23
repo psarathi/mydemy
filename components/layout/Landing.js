@@ -95,11 +95,13 @@ function Landing() {
                 <div className='coursePreviewHeader'>
                     <h2>{previewCourse?.name}</h2>
                     <h3>
-                        Topics: {previewCourse?.topics?.length}
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lessons:&nbsp;
-                        {previewCourse?.topics?.reduce((a, t) => {
-                            return a + t.files.length;
-                        }, 0)}
+                        <span>Topics: {previewCourse?.topics?.length}</span>
+                        <span>
+                            Lessons:&nbsp;
+                            {previewCourse?.topics?.reduce((a, t) => {
+                                return a + t.files.length;
+                            }, 0)}
+                        </span>
                     </h3>
                 </div>
                 <div className='coursePreviewDetails'>
