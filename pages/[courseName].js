@@ -10,9 +10,7 @@ function CourseName({courseName}) {
         ? course.topics.flatMap((t) => {
               return t.files
                   .filter((f) => f.ext === '.mp4')
-                  .map((f) =>
-                      getFileName(course, t, f)
-                  );
+                  .map((f) => getFileName(course, t, f));
           })
         : [];
     const [currentVideoFileIndex, setCurrentVideoFileIndex] = useState(0);
@@ -141,7 +139,7 @@ function CourseName({courseName}) {
                                                         ? 'playing'
                                                         : ''
                                                 }`}
-                                                onClick={(e) =>
+                                                onClick={() =>
                                                     playSelectedVideo(
                                                         getFileName(
                                                             course,

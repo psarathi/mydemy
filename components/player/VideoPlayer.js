@@ -42,6 +42,9 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     };
 
     const getVideoName = () => {
+        if (!currentVideo) {
+            return '';
+        }
         const pathParts = currentVideo.split('/');
         let duration = '';
         return `${pathParts[pathParts.length - 1].replace(
