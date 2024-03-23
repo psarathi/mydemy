@@ -4,6 +4,8 @@ body {
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #f7f7f7;
+    overflow: hidden;
 }
 
 a {
@@ -81,11 +83,33 @@ a {
     border-bottom: 1px solid gray;
     padding: 1em 0.5em;
     width: 100%;
+    cursor: pointer;
 }
 
 .videoFile:hover {
     background-color: mediumpurple;
     font-weight: bold;
+}
+
+div.topicListItemContainer {
+    display: flex;
+    justify-content: space-between;
+    /*justify-items: start;*/
+    column-gap: 0.5em;
+}
+
+div.listItemFileName {
+    flex-grow: 2;
+}
+
+div.copyVidURL {
+    font-size: x-large;
+}
+
+div.videoContainer {
+    margin: 0.5em;
+    display: flex;
+    flex-direction: column;
 }
 
 .playing {
@@ -102,6 +126,115 @@ a {
 
 .player {
     margin: 1em;
+    width: 100%;
+    height: auto;
+}
+
+.mainLandingContainer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: stretch;
+    /*overflow: clip;*/
+}
+
+div.listingContainer {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    min-height: 100vh;
+    flex-grow: 1;
+    padding-right: 1em;
+}
+
+.searchInputContainer {
+    margin: 1em 0;
+    display: flex;
+    column-gap: 1em;
+}
+
+.courseListContainer {
+    top: 5em;
+    display: flex;
+    flex-direction: column;
+    overflow: scroll;
+    max-height: 100vh;
+    flex-grow: 2;
+}
+
+div.courseListLineItemContainer {
+    display: flex;
+    justify-content: space-between;
+}
+
+div.courseListLineItemPreview {
+    font-size: x-large;
+    cursor: pointer;
+}
+
+.deepSkyBlue {
+    color: deepskyblue;
+}
+
+div.previewContainer {
+    width: 50%;
+    flex-grow: 1;
+    padding-left: 1em;
+    border-left: solid 1px #dddddd;
+    display: flex;
+    flex-direction: column;
+    align-content: center;
+    overflow: scroll;
+    max-height: 100vh;
+}
+
+div.coursePreviewHeader {
+    text-align: center;
+    border-bottom: solid 1px #dddddd;
+}
+
+div.coursePreviewTopic {
+
+}
+
+.course-list .coursePreviewTopic {
+    background-color: paleturquoise;
+}
+
+.course-list .coursePreviewTopicLesson {
+    padding-left: 2em;
+    font-weight: normal;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    width: 100%; /* Adjust width as needed */
+    top: 1em;
+}
+
+.course-list {
+    list-style: none;
+    padding: 0;
+    top: 1em;
+    margin-top: 1em;
+}
+
+/* Style for list items */
+.course-list li {
+    padding: 10px 10px;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+}
+
+/* Style for hover effect */
+.course-list li:hover {
+    background-color: #007bff; /* Light gray background color on hover */
+    transition: background-color 0.3s ease; /* Smooth transition effect */
+    color: #ffffff;
 }
 
 .firstItem {
@@ -145,4 +278,59 @@ a {
     left: 10px;
     position: fixed;
     top: 15px;
+}
+
+/*Switch*/
+/* Switch checkbox styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 3.7em;
+    height: 2.1em;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 1.5em;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 1.5em;
+    width: 1.5em;
+    left: 0.1em;
+    bottom: 0.3em;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #007bff;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #007bff;
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
 }

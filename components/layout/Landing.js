@@ -1,34 +1,127 @@
 import Link from 'next/link';
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import courses from '../../courses.json';
+import SwitchCheckbox from '../common/SwitchCheckbox';
 
 function Landing() {
-    const videoList = [
-        {name: 'sample.mp4', subtitles: 'sample.vtt'},
-        {name: 'sample2.mp4', subtitles: 'sample2.vtt'},
-    ];
-    const [currentVideo, setCurrentVideo] = useState(videoList[1]);
-    const handleEnded = () => {
-        // alert('Playing next video in 5 seconds...');
-        return videoList[0];
-    };
+    const [searchTerm, setSearchTerm] = useState('');
+    const [courseList, setCourseList] = useState(courses);
+    const [exactSearch, setExactSearch] = useState(false);
+    const [previewCourse, setPreviewCourse] = useState({});
+    const searchField = useRef(null);
+    useEffect(() => {
+        if (!searchTerm) {
+            setCourseList(courses);
+        } else {
+            let searchTermParts = searchTerm.trim().split(' ');
+            setCourseList(
+                courses.filter((c) =>
+                    !exactSearch
+                        ? searchTermParts.some(
+                              (p) => c.name.toLowerCase().indexOf(p) !== -1
+                          )
+                        : searchTermParts.every((p) =>
+                              c.name.toLowerCase().split(' ').includes(p)
+                          )
+                )
+            );
+        }
+    }, [searchTerm, exactSearch]);
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (e.metaKey && (e.key === 'K' || e.key === 'k')) {
+                searchField.current.focus();
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown);
+        return function cleanup() {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    function showCourseDetails(e, course) {
+        setPreviewCourse(course);
+    }
+
     return (
-        <div>
-            {/*<VideoPlayer*/}
-            {/*    videoFile={currentVideo.name}*/}
-            {/*    subtitlesFile={currentVideo.subtitles}*/}
-            {/*    getNextVideo={handleEnded}*/}
-            {/*/>*/}
-            <h2>List of courses:</h2>
-            <ul>
-                {courses.map((course, i) => (
-                    <li key={i}>
-                        <Link href={`/${course.name}`}>
-                            <a>{course.name}</a>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+        <div className='mainLandingContainer'>
+            <div className='listingContainer'>
+                <div className='searchInputContainer'>
+                    <input
+                        ref={searchField}
+                        autoFocus
+                        type='text'
+                        className='search-input'
+                        placeholder='search courses...'
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <SwitchCheckbox
+                        initialState={exactSearch}
+                        callback={setExactSearch}
+                    />
+                </div>
+                <div className='courseListHeader'>
+                    <h2>Courses: {`(${courseList.length})`}</h2>
+                </div>
+                <div className='courseListContainer'>
+                    <ul className='course-list'>
+                        {courseList.map((course, i) => (
+                            <li key={i}>
+                                <div className='courseListLineItemContainer'>
+                                    <Link href={`/${course.name}`}>
+                                        {course.name}
+                                    </Link>
+                                    <div
+                                        className={
+                                            course.name === previewCourse?.name
+                                                ? 'courseListLineItemPreview deepSkyBlue'
+                                                : 'courseListLineItemPreview'
+                                        }
+                                        onMouseOverCapture={(event) =>
+                                            showCourseDetails(event, course)
+                                        }
+                                    >
+                                        &#9215;
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+            <div className='previewContainer'>
+                <div className='coursePreviewHeader'>
+                    <h2>{previewCourse?.name}</h2>
+                    <h3>
+                        Topics: {previewCourse?.topics?.length}
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lessons:&nbsp;
+                        {previewCourse?.topics?.reduce((a, t) => {
+                            return a + t.files.length;
+                        }, 0)}
+                    </h3>
+                </div>
+                <div className='coursePreviewDetails'>
+                    <ul className='course-list'>
+                        {previewCourse?.topics?.flatMap((topic, i) => (
+                            <>
+                                <li className='coursePreviewTopic'>
+                                    {topic.name}
+                                </li>
+                                {topic.files.map((f, j) => (
+                                    <li
+                                        className='coursePreviewTopicLesson'
+                                        key={j}
+                                    >
+                                        {f.name}
+                                    </li>
+                                ))}
+                            </>
+                        ))}
+                    </ul>
+                </div>
+            </div>
         </div>
     );
 }

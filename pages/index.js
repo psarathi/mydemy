@@ -7,12 +7,6 @@ const BASE_PATH = process.env.basePath;
 export default function Home() {
     return (
         <div className={styles.container}>
-            <Image
-                src={`${BASE_PATH}/vercel.svg`}
-                alt='me'
-                width='64'
-                height='64'
-            />
             <Landing />
         </div>
     );

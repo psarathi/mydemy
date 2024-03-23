@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import React, {useEffect, useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {COURSE_PATH} from '../constants';
+import {BASE_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
 
 function CourseName({courseName}) {
@@ -10,9 +10,8 @@ function CourseName({courseName}) {
         ? course.topics.flatMap((t) => {
               return t.files
                   .filter((f) => f.ext === '.mp4')
-                  .map(
-                      (f) =>
-                          `${COURSE_PATH}/${course.name}/${t.name}/${f.fileName}`
+                  .map((f) =>
+                      getFileName(course, t, f)
                   );
           })
         : [];
@@ -73,6 +72,17 @@ function CourseName({courseName}) {
         setIsSidebarCollapsed(false);
     };
 
+    function copyVideoURL(e, filePath) {
+        navigator.clipboard.writeText(`${BASE_PATH}/${filePath}`);
+        e.stopPropagation();
+    }
+
+    function getFileName(c, t, f) {
+        return !t.isTopicLess
+            ? `${LOCAL_CDN}/${c.name}/${t.name}/${f.fileName}`
+            : `${LOCAL_CDN}/${c.name}/${f.fileName}`;
+    }
+
     return course ? (
         <div className='courseContainer'>
             <div
@@ -98,7 +108,8 @@ function CourseName({courseName}) {
                         <div className='navMenu'>
                             <div className='backButton'>
                                 <Link href='/'>
-                                    <a>&#8592; All Courses</a>
+                                    {/*<a>&#8592; All Courses</a>*/}
+                                    All Courses
                                 </Link>
                             </div>
                             <div
@@ -132,11 +143,34 @@ function CourseName({courseName}) {
                                                 }`}
                                                 onClick={(e) =>
                                                     playSelectedVideo(
-                                                        `${COURSE_PATH}/${course.name}/${topic.name}/${file.fileName}`
+                                                        getFileName(
+                                                            course,
+                                                            topic,
+                                                            file
+                                                        )
                                                     )
                                                 }
                                             >
-                                                {file.name}
+                                                <div className='topicListItemContainer'>
+                                                    <div className='listItemFileName'>
+                                                        {file.name}
+                                                    </div>
+                                                    <div
+                                                        className='copyVidURL'
+                                                        onClick={(event) =>
+                                                            copyVideoURL(
+                                                                event,
+                                                                getFileName(
+                                                                    course,
+                                                                    topic,
+                                                                    file
+                                                                )
+                                                            )
+                                                        }
+                                                    >
+                                                        &#10064;
+                                                    </div>
+                                                </div>
                                             </li>
                                         ))}
                                 </ul>

@@ -1,6 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-
-const BASE_PATH = process.env.basePath;
+import {BASE_PATH} from '../../constants';
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
@@ -75,7 +74,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     };
 
     return (
-        <>
+        <div className='videoContainer'>
             <div className='fileName'>{`${getVideoName()} ${videoDuration}`}</div>
             <br />
             <video
@@ -87,9 +86,9 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                 onLoadStart={addTrack}
                 onLoadedMetadata={getVideoDuration}
             >
-                <source src={`${BASE_PATH}/${currentVideo}`} />
+                <source src={`${BASE_PATH}/${currentVideo}`} type='video/mp4' />
             </video>
-        </>
+        </div>
     );
 }
 

@@ -19,6 +19,7 @@ const fetchCourseListings = (dirPath, sorted = true) => {
             if (fs.statSync(fullPath).isDirectory()) {
                 // if we're under the main course folder create a new course object
                 if (dirPath === rootCourseFolder) {
+                    // Put the name of the course as the topic just in case the main course folder contains only video files
                     courses.push({name: item, topics: []});
                     fetchCourseListings(fullPath);
                 } else {
@@ -29,6 +30,8 @@ const fetchCourseListings = (dirPath, sorted = true) => {
                     const courseIndex = courses.findIndex(
                         (course) => course.name === courseName
                     );
+                    /*                    // we need to take out the course folder name if there are actual topic folders
+                                        courses[courseIndex].topics.pop();*/
                     courses[courseIndex].topics.push({
                         name: topicDetails.base,
                         files: [],
@@ -49,7 +52,7 @@ const fetchCourseListings = (dirPath, sorted = true) => {
                 const courseIndex = courses.findIndex(
                     (course) => course.name === courseName
                 );
-                const topicIndex = courses[courseIndex].topics.findIndex(
+                const topicIndex = courses[courseIndex].topics?.findIndex(
                     (topic) => topic.name === topicName
                 );
                 //don't include anything other than the video and the subtitle files
@@ -71,6 +74,9 @@ const fetchCourseListings = (dirPath, sorted = true) => {
                 });
             });
         }
+    } catch (e) {
+        console.log(dirPath);
+        console.log(e);
     } finally {
         if (!courses.length) {
             console.log('WARNING: Did not find any courses'.warn);
