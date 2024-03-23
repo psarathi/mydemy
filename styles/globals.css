@@ -185,8 +185,8 @@ div.previewContainer {
     display: flex;
     flex-direction: column;
     align-content: center;
-    overflow: scroll;
     max-height: 100vh;
+    justify-content: start;
 }
 
 div.coursePreviewHeader {
@@ -194,12 +194,14 @@ div.coursePreviewHeader {
     border-bottom: solid 1px #dddddd;
 }
 
-div.coursePreviewTopic {
-
+div.coursePreviewDetails {
+    overflow: scroll;
 }
 
 .course-list .coursePreviewTopic {
     background-color: paleturquoise;
+    position: sticky;
+    top: 0;
 }
 
 .course-list .coursePreviewTopicLesson {
