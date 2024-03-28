@@ -41,7 +41,7 @@ function Landing() {
     }, []);
 
     function showCourseDetails(e, course) {
-        setPreviewCourse(course);
+        previewCourse.name ? setPreviewCourse({}) : setPreviewCourse(course);
     }
 
     return (
@@ -94,29 +94,50 @@ function Landing() {
             <div className='previewContainer'>
                 <div className='coursePreviewHeader'>
                     <h2>{previewCourse?.name}</h2>
-                    <h3>
-                        <span>Topics: {previewCourse?.topics?.length}</span>
-                        <span>
-                            Lessons:&nbsp;
-                            {previewCourse?.topics?.reduce((a, t) => {
-                                return a + t.files.length;
-                            }, 0)}
-                        </span>
-                    </h3>
+                    {previewCourse.name && (
+                        <h3>
+                            <span>Topics: {previewCourse?.topics?.length}</span>
+                            <span>
+                                Lessons:&nbsp;
+                                {previewCourse?.topics?.reduce((a, t) => {
+                                    return a + t.files.length;
+                                }, 0)}
+                            </span>
+                        </h3>
+                    )}
                 </div>
                 <div className='coursePreviewDetails'>
                     <ul className='course-list'>
-                        {previewCourse?.topics?.flatMap((topic, i) => (
+                        {previewCourse?.topics?.map((topic, i) => (
                             <>
-                                <li className='coursePreviewTopic'>
-                                    {topic.name}
+                                <li key={i} className='coursePreviewTopic'>
+                                    <Link
+                                        href={{
+                                            pathname: previewCourse.name,
+                                            query: {
+                                                topic: topic.name,
+                                            },
+                                        }}
+                                    >
+                                        {topic.name}
+                                    </Link>
                                 </li>
                                 {topic.files.map((f, j) => (
                                     <li
                                         className='coursePreviewTopicLesson'
                                         key={j}
                                     >
-                                        {f.name}
+                                        <Link
+                                            href={{
+                                                pathname: previewCourse.name,
+                                                query: {
+                                                    topic: topic.name,
+                                                    lesson: f.e,
+                                                },
+                                            }}
+                                        >
+                                            {f.name}
+                                        </Link>
                                     </li>
                                 ))}
                             </>

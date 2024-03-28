@@ -1,10 +1,14 @@
 import Link from 'next/link';
+import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {BASE_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
 
 function CourseName({courseName}) {
+    const queryParams = useSearchParams();
+    const topic = queryParams.get('topic');
+    const lesson = queryParams.get('lesson');
     const course = courses.find((c) => c.name === courseName);
     const videoFileList = course
         ? course.topics.flatMap((t) => {
@@ -13,8 +17,33 @@ function CourseName({courseName}) {
                   .map((f) => getFileName(course, t, f));
           })
         : [];
-    const [currentVideoFileIndex, setCurrentVideoFileIndex] = useState(0);
-    const [videoFile, setVideoFile] = useState(videoFileList[0]);
+    const getVideoFileIndex = (topic, lesson) => {
+        let lessonFileName;
+        let fileIndex;
+        if (topic && lesson) {
+            lessonFileName = course.topics
+                .find((t) => t.name === topic)
+                ?.files.find((f) => f.name === lesson)?.name;
+            fileIndex = videoFileList.findIndex((vf) =>
+                vf.includes(lessonFileName)
+            );
+        } else if (topic) {
+            lessonFileName = course.topics.find((t) => t.name === topic)
+                ?.files[0].name;
+            fileIndex = videoFileList.findIndex((vf) =>
+                vf.includes(lessonFileName)
+            );
+        }
+        return !fileIndex || fileIndex < 0 || fileIndex >= videoFileList.length
+            ? 0
+            : fileIndex;
+    };
+    const [currentVideoFileIndex, setCurrentVideoFileIndex] = useState(
+        getVideoFileIndex(topic, lesson)
+    );
+    const [videoFile, setVideoFile] = useState(
+        videoFileList[currentVideoFileIndex]
+    );
     const [subtitlesFile, setSubtitlesFile] = useState(
         videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
     );
@@ -23,7 +52,7 @@ function CourseName({courseName}) {
         if (!videoFileList || !videoFileList.length) {
             return '';
         }
-        if (index > videoFileList.length - 1) {
+        if (index > videoFileList.length - 1 || index < 0) {
             index = 0;
         }
         const filePathParts = videoFileList[index].split('/');
@@ -32,7 +61,7 @@ function CourseName({courseName}) {
             : '';
     };
     const [currentVideo, setCurrentVideo] = useState(
-        getVideoFileNameAtGivenIndex(0)
+        getVideoFileNameAtGivenIndex(currentVideoFileIndex)
     );
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
