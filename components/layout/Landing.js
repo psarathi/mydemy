@@ -134,7 +134,7 @@ function Landing() {
                                                 pathname: previewCourse.name,
                                                 query: {
                                                     topic: topic.name,
-                                                    lesson: f.e,
+                                                    lesson: f.name,
                                                 },
                                             }}
                                         >
