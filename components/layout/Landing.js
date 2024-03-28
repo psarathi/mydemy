@@ -41,7 +41,7 @@ function Landing() {
     }, []);
 
     function showCourseDetails(e, course) {
-        previewCourse.name && previewCourse.name === course.name
+        previewCourse.name === course.name
             ? setPreviewCourse({})
             : setPreviewCourse(course);
     }
