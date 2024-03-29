@@ -124,24 +124,28 @@ function Landing() {
                                         {topic.name}
                                     </Link>
                                 </li>
-                                {topic.files.map((f, j) => (
-                                    <li
-                                        className='coursePreviewTopicLesson'
-                                        key={j}
-                                    >
-                                        <Link
-                                            href={{
-                                                pathname: previewCourse.name,
-                                                query: {
-                                                    topic: topic.name,
-                                                    lesson: f.name,
-                                                },
-                                            }}
-                                        >
-                                            {f.name}
-                                        </Link>
-                                    </li>
-                                ))}
+                                {topic.files.map(
+                                    (f, j) =>
+                                        f.ext === '.mp4' && (
+                                            <li
+                                                className='coursePreviewTopicLesson'
+                                                key={j}
+                                            >
+                                                <Link
+                                                    href={{
+                                                        pathname:
+                                                            previewCourse.name,
+                                                        query: {
+                                                            topic: topic.name,
+                                                            lesson: f.name,
+                                                        },
+                                                    }}
+                                                >
+                                                    {f.name}
+                                                </Link>
+                                            </li>
+                                        )
+                                )}
                             </>
                         ))}
                     </ul>

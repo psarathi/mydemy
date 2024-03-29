@@ -4,7 +4,11 @@ const topicNameSorter = require('./topicNameSorter');
 const topicFileNameSorter = require('./topicFileNameSorter');
 const UNNECESSARY_FILE_EXTENSIONS = ['.url', '', '.DS_Store'];
 
-async function listDirectoriesWithTopics(directoryPath, sorted = true) {
+async function listDirectoriesWithTopics(
+    directoryPath,
+    sorted = true,
+    logCourseDetails = true
+) {
     const courses = [];
 
     try {
@@ -48,7 +52,6 @@ async function listDirectoriesWithTopics(directoryPath, sorted = true) {
                         }
                         topicObj.files.push(fileObj);
                     }
-
                     course.topics.push(topicObj);
                 } else {
                     await Promise.all(
@@ -90,6 +93,11 @@ async function listDirectoriesWithTopics(directoryPath, sorted = true) {
                     );
                 }
                 courses.push(course);
+                if (logCourseDetails) {
+                    console.log(
+                        `processing course: ${course.name} topics found:${course.topics.length}`
+                    );
+                }
             }
         }
         if (sorted) {
