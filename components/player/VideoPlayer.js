@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {BASE_PATH} from '../../constants';
+import {BASE_CDN_PATH} from '../../constants';
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
@@ -31,7 +31,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         track.kind = 'captions';
         track.label = 'English';
         track.srclang = 'en';
-        track.src = `${BASE_PATH}/${currentSubtitle}`;
+        track.src = `${BASE_CDN_PATH}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
             vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
@@ -89,7 +89,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                 onLoadStart={addTrack}
                 onLoadedMetadata={getVideoDuration}
             >
-                <source src={`${BASE_PATH}/${currentVideo}`} type='video/mp4' />
+                <source
+                    src={`${BASE_CDN_PATH}/${currentVideo}`}
+                    type='video/mp4'
+                />
             </video>
         </div>
     );

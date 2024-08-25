@@ -6,14 +6,17 @@ const UNNECESSARY_FILE_EXTENSIONS = ['.url', '', '.DS_Store'];
 
 async function listDirectoriesWithTopics(
     directoryPath,
+    coursesToProcess = [],
     sorted = true,
     logCourseDetails = true
 ) {
     const courses = [];
 
     try {
-        const items = await fs.readdir(directoryPath, {withFileTypes: true});
-
+        let items = await fs.readdir(directoryPath, {withFileTypes: true});
+        if (coursesToProcess.length > 0) {
+            items = items.filter((i) => coursesToProcess.includes(i.name));
+        }
         for (const item of items) {
             if (
                 item.isDirectory() &&

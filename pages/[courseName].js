@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {BASE_PATH, LOCAL_CDN} from '../constants';
+import {BASE_CDN_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
 
 function CourseName({courseName}) {
@@ -100,7 +100,7 @@ function CourseName({courseName}) {
     };
 
     function copyVideoURL(e, filePath) {
-        navigator.clipboard.writeText(`${BASE_PATH}/${filePath}`);
+        navigator.clipboard.writeText(`${BASE_CDN_PATH}/${filePath}`);
         e.stopPropagation();
     }
 
