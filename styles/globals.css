@@ -277,14 +277,21 @@ div.coursePreviewDetails {
 }
 
 .course-list .coursePreviewTopic {
-    background-color: paleturquoise;
+    background: var(--primary-color);
+    color: white;
     position: sticky;
     top: 0;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
 }
 
 .course-list .coursePreviewTopicLesson {
     padding-left: 2em;
     font-weight: normal;
+    color: var(--text-primary);
+    background: var(--surface);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .search-input {
@@ -965,7 +972,7 @@ input:checked + .slider:before {
     border-bottom: 1px solid var(--surface);
     transition: all 0.2s ease;
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .lesson-link:last-child {
