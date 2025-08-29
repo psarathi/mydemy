@@ -3,6 +3,7 @@ import Link from 'next/link';
 import React, {useEffect, useRef, useState} from 'react';
 import courses from '../../courses.json';
 import SwitchCheckbox from '../common/SwitchCheckbox';
+import ThemeToggle from '../common/ThemeToggle';
 
 function Landing({search_term = '', exact}) {
     exact = exact?.toLowerCase() === 'true';
@@ -53,16 +54,21 @@ function Landing({search_term = '', exact}) {
         <div className='modern-landing-container'>
             <header className='landing-header'>
                 <div className='header-content'>
-                    <h1 className='brand-title'>
-                        <span className='brand-icon'>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                            </svg>
-                        </span>
-                        Mydemy
-                    </h1>
-                    <p className='brand-subtitle'>Your personal learning platform</p>
+                    <div className='brand-section'>
+                        <h1 className='brand-title'>
+                            <span className='brand-icon'>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                </svg>
+                            </span>
+                            Mydemy
+                        </h1>
+                        <p className='brand-subtitle'>Your personal learning platform</p>
+                    </div>
+                    <div className='header-actions'>
+                        <ThemeToggle />
+                    </div>
                 </div>
             </header>
             <div className='courses-section'>

@@ -1,10 +1,11 @@
 import "../styles/globals.css";
+import { ThemeProvider } from '../contexts/ThemeContext';
 
 function App({ Component, pageProps }) {
   return (
-    <div>
+    <ThemeProvider>
       <Component {...pageProps} />
-    </div>
+    </ThemeProvider>
   );
 }
 
