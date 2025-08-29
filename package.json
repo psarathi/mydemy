@@ -19,6 +19,7 @@
     "@babel/core": "^7.22.0",
     "@babel/preset-env": "^7.22.0",
     "@babel/preset-react": "^7.22.0",
+    "babel-loader": "^9.1.0",
     "colors": "^1.4.0",
     "eslint": "7.31.0",
     "eslint-config-next": "11.0.1",
