@@ -1002,6 +1002,19 @@ input:checked + .slider:before {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: inherit;
+}
+
+[data-theme="dark"] .lesson-link {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .lesson-link span {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .topic-link h4 {
+    color: white !important;
 }
 
 /* Preview Placeholder */
