@@ -417,11 +417,13 @@ input:checked + .slider:before {
     margin: 0;
     font-size: 1.75rem;
     font-weight: 700;
-    background: var(--gradient-primary);
+    background: linear-gradient(45deg, #6366f1, #8b5cf6, #06b6d4, #3b82f6, #6366f1);
+    background-size: 300% 300%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     letter-spacing: -0.025em;
+    animation: gradientShift 4s ease-in-out infinite;
 }
 
 .brand-icon {
@@ -1017,6 +1019,12 @@ input:focus + .slider {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
