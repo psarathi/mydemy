@@ -477,6 +477,10 @@ input:checked + .slider:before {
 
 [data-theme="dark"] .brand-title {
     background: linear-gradient(45deg, #8b5cf6, #a855f7, #22d3ee, #6366f1, #8b5cf6);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .brand-icon {
