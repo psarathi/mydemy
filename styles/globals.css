@@ -384,16 +384,89 @@ input:checked + .slider:before {
 .modern-landing-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
     gap: 0;
     height: 100vh;
     overflow: hidden;
     background: transparent;
 }
 
+/* Landing Header */
+.landing-header {
+    grid-column: 1 / -1;
+    background: transparent;
+    border-bottom: 1px solid var(--border-light);
+    padding: 1rem 2rem;
+    z-index: 10;
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.25rem;
+}
+
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.025em;
+}
+
+.brand-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--gradient-primary);
+    border-radius: calc(var(--radius) * 0.75);
+    color: white;
+    box-shadow: var(--shadow-colored);
+}
+
+.brand-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
 @media (max-width: 1024px) {
     .modern-landing-container {
         grid-template-columns: 1fr;
-        gap: 1.5rem;
+        grid-template-rows: auto 1fr;
+        gap: 0;
+        padding: 0;
+    }
+    
+    .landing-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .brand-title {
+        font-size: 1.5rem;
+    }
+    
+    .brand-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .brand-subtitle {
+        font-size: 0.75rem;
+    }
+    
+    .courses-section {
         padding: 1rem;
     }
 }
@@ -403,8 +476,9 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    height: 100vh;
+    height: 100%;
     padding: 2rem;
+    overflow: auto;
 }
 
 /* Search Section */

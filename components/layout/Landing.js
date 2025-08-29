@@ -51,6 +51,20 @@ function Landing({search_term = '', exact}) {
 
     return (
         <div className='modern-landing-container'>
+            <header className='landing-header'>
+                <div className='header-content'>
+                    <h1 className='brand-title'>
+                        <span className='brand-icon'>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                        </span>
+                        Mydemy
+                    </h1>
+                    <p className='brand-subtitle'>Your personal learning platform</p>
+                </div>
+            </header>
             <div className='courses-section'>
                 <div className='search-section'>
                     <div className='search-bar'>
