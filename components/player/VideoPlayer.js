@@ -153,7 +153,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                                 type='video/mp4'
                             />
                             <p className='video-fallback'>
-                                Your browser doesn't support HTML5 video. 
+                                Your browser doesn&apos;t support HTML5 video. 
                                 <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
                             </p>
                         </video>

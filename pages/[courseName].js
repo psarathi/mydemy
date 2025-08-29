@@ -242,7 +242,7 @@ function CourseName({courseName}) {
                     <path d="m15 9-6 6"></path>
                 </svg>
                 <h2>Course Not Found</h2>
-                <p>The course "{courseName}" could not be found.</p>
+                <p>The course &quot;{courseName}&quot; could not be found.</p>
                 <Link href="/" className='back-to-home-btn'>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="15 18 9 12 15 6"></polyline>
