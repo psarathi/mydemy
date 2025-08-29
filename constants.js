@@ -1,5 +1,5 @@
-// exports.BASE_CDN_PATH = 'http://192.168.1.141:5555'; // internal IP
-exports.BASE_CDN_PATH = 'http://98.45.192.254:5555'; // external IP and port
+exports.BASE_CDN_PATH = 'http://192.168.1.141:5555'; // internal IP
+// exports.BASE_CDN_PATH = 'http://98.45.192.254:5555'; // external IP and port
 // exports.COURSES_FOLDER = '/public/courses';
 exports.COURSES_FOLDER = '/Volumes/medianas/Videos';
 exports.LOCAL_CDN = 'Videos';

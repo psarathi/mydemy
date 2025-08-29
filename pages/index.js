@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import {useRouter} from 'next/router';
 import {useEffect} from 'react';
 import Landing from '../components/layout/Landing';
 import styles from '../styles/Home.module.css';
@@ -6,6 +7,7 @@ import styles from '../styles/Home.module.css';
 const BASE_PATH = process.env.basePath;
 
 export default function Home() {
+    const router = useRouter();
     useEffect(() => {
         const eventSource = new EventSource('api/serverNotifier');
         eventSource.onmessage = (event) => {
@@ -26,7 +28,10 @@ export default function Home() {
             <Head>
                 <title>Mydemy</title>
             </Head>
-            <Landing />
+            <Landing
+                search_term={router.query?.q}
+                exact={router.query?.exact}
+            />
         </div>
     );
 }

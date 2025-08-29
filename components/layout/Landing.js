@@ -1,12 +1,14 @@
+// 'use client';
 import Link from 'next/link';
 import React, {useEffect, useRef, useState} from 'react';
 import courses from '../../courses.json';
 import SwitchCheckbox from '../common/SwitchCheckbox';
 
-function Landing() {
-    const [searchTerm, setSearchTerm] = useState('');
+function Landing({search_term = '', exact}) {
+    exact = exact?.toLowerCase() === 'true';
+    const [searchTerm, setSearchTerm] = useState(search_term);
     const [courseList, setCourseList] = useState(courses);
-    const [exactSearch, setExactSearch] = useState(false);
+    const [exactSearch, setExactSearch] = useState(exact);
     const [previewCourse, setPreviewCourse] = useState({});
     const searchField = useRef(null);
     useEffect(() => {
@@ -27,6 +29,7 @@ function Landing() {
             );
         }
     }, [searchTerm, exactSearch]);
+
     useEffect(() => {
         function handleKeyDown(e) {
             if (e.metaKey && (e.key === 'K' || e.key === 'k')) {
@@ -47,109 +50,156 @@ function Landing() {
     }
 
     return (
-        <div className='mainLandingContainer'>
-            <div className='listingContainer'>
-                <div className='searchInputContainer'>
-                    <input
-                        ref={searchField}
-                        autoFocus
-                        type='text'
-                        className='search-input'
-                        placeholder='search courses...'
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <SwitchCheckbox
-                        initialState={exactSearch}
-                        callback={setExactSearch}
-                    />
+        <div className='modern-landing-container'>
+            <div className='courses-section'>
+                <div className='search-section'>
+                    <div className='search-bar'>
+                        <svg className='search-icon' width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input
+                            ref={searchField}
+                            autoFocus
+                            type='text'
+                            className='modern-search-input'
+                            placeholder='Search courses...'
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className='search-controls'>
+                        <label className='exact-search-toggle'>
+                            <SwitchCheckbox
+                                initialState={exactSearch}
+                                callback={setExactSearch}
+                            />
+                            <span className='toggle-label'>Exact match</span>
+                        </label>
+                    </div>
                 </div>
-                <div className='courseListHeader'>
-                    <h2>Courses: {`(${courseList.length})`}</h2>
+                
+                <div className='courses-header'>
+                    <h1>Courses</h1>
+                    <span className='course-count'>{courseList.length} available</span>
                 </div>
-                <div className='courseListContainer'>
-                    <ul className='course-list'>
-                        {courseList.map((course, i) => (
-                            <li key={i}>
-                                <div className='courseListLineItemContainer'>
-                                    <Link href={`/${course.name}`}>
-                                        {course.name}
-                                    </Link>
-                                    <div
-                                        className={
-                                            course.name === previewCourse?.name
-                                                ? 'courseListLineItemPreview deepSkyBlue'
-                                                : 'courseListLineItemPreview'
-                                        }
-                                        onMouseOverCapture={(event) =>
-                                            showCourseDetails(event, course)
-                                        }
-                                    >
-                                        &#9215;
-                                    </div>
+                
+                <div className='courses-grid'>
+                    {courseList.map((course, i) => (
+                        <div 
+                            key={i} 
+                            className='course-card'
+                            onMouseEnter={(event) => showCourseDetails(event, course)}
+                        >
+                            <div className='course-card-content'>
+                                <Link href={`/${course.name}`} className='course-link'>
+                                    <h3 className='course-title'>{course.name}</h3>
+                                </Link>
+                                <div className='course-stats'>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                        </svg>
+                                        {course.topics?.length || 0} topics
+                                    </span>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                        {course.topics?.reduce((a, t) => a + (t.files?.length || 0), 0) || 0} lessons
+                                    </span>
                                 </div>
-                            </li>
-                        ))}
-                    </ul>
+                            </div>
+                            <div className='preview-btn-container'>
+                                <button
+                                    className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
+                                    aria-label={`Preview ${course.name}`}
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
-            <div className='previewContainer'>
-                <div className='coursePreviewHeader'>
-                    <h2>{previewCourse?.name}</h2>
-                    {previewCourse.name && (
-                        <h3>
-                            <span>Topics: {previewCourse?.topics?.length}</span>
-                            <span>
-                                Lessons:&nbsp;
-                                {previewCourse?.topics?.reduce((a, t) => {
-                                    return a + t.files.length;
-                                }, 0)}
-                            </span>
-                        </h3>
-                    )}
-                </div>
-                <div className='coursePreviewDetails'>
-                    <ul className='course-list'>
-                        {previewCourse?.topics?.map((topic, i) => (
-                            <>
-                                <li key={i} className='coursePreviewTopic'>
-                                    <Link
-                                        href={{
-                                            pathname: previewCourse.name,
-                                            query: {
-                                                topic: topic.name,
-                                            },
-                                        }}
-                                    >
-                                        {topic.name}
-                                    </Link>
-                                </li>
-                                {topic.files.map(
-                                    (f, j) =>
-                                        f.ext === '.mp4' && (
-                                            <li
-                                                className='coursePreviewTopicLesson'
-                                                key={j}
+            
+            <div className='preview-section'>
+                {previewCourse?.name ? (
+                    <>
+                        <div className='preview-header'>
+                            <h2>{previewCourse.name}</h2>
+                            <div className='preview-stats'>
+                                <div className='stat-badge'>
+                                    <span className='stat-number'>{previewCourse?.topics?.length || 0}</span>
+                                    <span className='stat-label'>Topics</span>
+                                </div>
+                                <div className='stat-badge'>
+                                    <span className='stat-number'>
+                                        {previewCourse?.topics?.reduce((a, t) => a + (t.files?.length || 0), 0) || 0}
+                                    </span>
+                                    <span className='stat-label'>Lessons</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className='preview-content'>
+                            <div className='topics-list'>
+                                {previewCourse?.topics?.map((topic, i) => (
+                                    <div key={i} className='topic-section'>
+                                        <div className='topic-header'>
+                                            <Link
+                                                href={{
+                                                    pathname: previewCourse.name,
+                                                    query: { topic: topic.name },
+                                                }}
+                                                className='topic-link'
                                             >
+                                                <h4>{topic.name}</h4>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                                </svg>
+                                            </Link>
+                                        </div>
+                                        <div className='lessons-list'>
+                                            {topic.files?.filter(f => f.ext === '.mp4').map((f, j) => (
                                                 <Link
+                                                    key={j}
                                                     href={{
-                                                        pathname:
-                                                            previewCourse.name,
+                                                        pathname: previewCourse.name,
                                                         query: {
                                                             topic: topic.name,
                                                             lesson: f.name,
                                                         },
                                                     }}
+                                                    className='lesson-link'
                                                 >
-                                                    {f.name}
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                    </svg>
+                                                    <span>{f.name}</span>
                                                 </Link>
-                                            </li>
-                                        )
-                                )}
-                            </>
-                        ))}
-                    </ul>
-                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className='preview-placeholder'>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <h3>Preview a Course</h3>
+                        <p>Hover over a course card to see its topics and lessons</p>
+                    </div>
+                )}
             </div>
         </div>
     );

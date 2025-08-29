@@ -111,111 +111,146 @@ function CourseName({courseName}) {
     }
 
     return course ? (
-        <div className='courseContainer'>
-            <div
-                className={
-                    isSidebarCollapsed
-                        ? 'courseWrapper collapsedSidebar'
-                        : 'courseWrapper'
-                }
-            >
+        <div className='modern-course-container'>
+            <div className={`modern-course-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 {isSidebarCollapsed && (
-                    <div className='openSidebar' onClick={openSidebar}>
-                        &#8594;
-                    </div>
+                    <button className='modern-open-sidebar-btn' onClick={openSidebar} aria-label="Open sidebar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
                 )}
-                <div
-                    className={
-                        isSidebarCollapsed
-                            ? 'courseListings hideContents'
-                            : 'courseListings'
-                    }
-                >
-                    <div className='courseName'>
-                        <div className='navMenu'>
-                            <div className='backButton'>
-                                <Link href='/'>
-                                    {/*<a>&#8592; All Courses</a>*/}
-                                    All Courses
-                                </Link>
-                            </div>
-                            <div
-                                className='closeSidebar'
+                
+                <aside className={`modern-sidebar ${isSidebarCollapsed ? 'hidden' : ''}`}>
+                    <header className='modern-course-header'>
+                        <div className='modern-nav-controls'>
+                            <Link href='/' className='modern-back-btn'>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                <span>All Courses</span>
+                            </Link>
+                            <button 
+                                className='modern-collapse-btn' 
                                 onClick={collapseSideBar}
+                                aria-label="Collapse sidebar"
                             >
-                                &#10539;
-                            </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
                         </div>
-                        <div className='courseTitle'>{courseName}</div>
-                    </div>
-                    <ul>
-                        {course.topics.map((topic, i) => (
-                            <>
-                                <div key={i} className='topicName'>
-                                    <strong>{topic.name}</strong>
+                        <h1 className='modern-course-title'>{courseName}</h1>
+                        <div className='course-stats'>
+                            <span className='stat-item'>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                </svg>
+                                {course.topics.length} Topics
+                            </span>
+                            <span className='stat-item'>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                </svg>
+                                {videoFileList.length} Lessons
+                            </span>
+                        </div>
+                    </header>
+                    
+                    <div className='modern-content-list'>
+                        {course.topics.map((topic, topicIndex) => (
+                            <div key={topicIndex} className='modern-topic-section'>
+                                <div className='modern-topic-header'>
+                                    <h3>{topic.name}</h3>
+                                    <span className='topic-lesson-count'>
+                                        {topic.files.filter(f => f.ext === '.mp4').length} lessons
+                                    </span>
                                 </div>
-                                <ul>
+                                
+                                <div className='modern-lessons-list'>
                                     {topic.files
                                         .filter((f) => f.ext === '.mp4')
-                                        .map((file, i) => (
-                                            <li
-                                                key={i}
-                                                className={`videoFile ${
-                                                    i === 0 ? 'firstItem' : ''
-                                                } ${
-                                                    file.fileName ===
-                                                    currentVideo
-                                                        ? 'playing'
-                                                        : ''
+                                        .map((file, fileIndex) => (
+                                            <div
+                                                key={fileIndex}
+                                                className={`modern-lesson-item ${
+                                                    file.fileName === currentVideo ? 'active' : ''
                                                 }`}
                                                 onClick={() =>
                                                     playSelectedVideo(
-                                                        getFileName(
-                                                            course,
-                                                            topic,
-                                                            file
-                                                        )
+                                                        getFileName(course, topic, file)
                                                     )
                                                 }
                                             >
-                                                <div className='topicListItemContainer'>
-                                                    <div className='listItemFileName'>
-                                                        {file.name}
+                                                <div className='lesson-content'>
+                                                    <div className='lesson-play-icon'>
+                                                        {file.fileName === currentVideo ? (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <rect x="6" y="4" width="4" height="16"></rect>
+                                                                <rect x="14" y="4" width="4" height="16"></rect>
+                                                            </svg>
+                                                        ) : (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                            </svg>
+                                                        )}
                                                     </div>
-                                                    <div
-                                                        className='copyVidURL'
-                                                        onClick={(event) =>
-                                                            copyVideoURL(
-                                                                event,
-                                                                getFileName(
-                                                                    course,
-                                                                    topic,
-                                                                    file
-                                                                )
-                                                            )
-                                                        }
-                                                    >
-                                                        &#10064;
+                                                    <div className='lesson-info'>
+                                                        <span className='lesson-name'>{file.name}</span>
                                                     </div>
                                                 </div>
-                                            </li>
+                                                <button
+                                                    className='modern-copy-url-btn'
+                                                    onClick={(event) =>
+                                                        copyVideoURL(
+                                                            event,
+                                                            getFileName(course, topic, file)
+                                                        )
+                                                    }
+                                                    aria-label={`Copy URL for ${file.name}`}
+                                                >
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         ))}
-                                </ul>
-                            </>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
-                </div>
-                <div className='videoPlayer'>
+                    </div>
+                </aside>
+                
+                <main className='modern-video-section'>
                     <VideoPlayer
                         videoFile={videoFile}
                         subtitlesFile={subtitlesFile}
                         getNextVideo={getNextVideo}
                     />
-                </div>
+                </main>
             </div>
         </div>
     ) : (
-        <div>{`${courseName} is not a valid course name`}</div>
+        <div className='course-not-found'>
+            <div className='not-found-content'>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="m9 9 6 6"></path>
+                    <path d="m15 9-6 6"></path>
+                </svg>
+                <h2>Course Not Found</h2>
+                <p>The course "{courseName}" could not be found.</p>
+                <Link href="/" className='back-to-home-btn'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    Back to All Courses
+                </Link>
+            </div>
+        </div>
     );
 }
 
