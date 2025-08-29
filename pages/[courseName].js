@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {BASE_CDN_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
@@ -48,6 +48,7 @@ function CourseName({courseName}) {
         videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
     );
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const activeElementRef = useRef(null);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
             return '';
@@ -89,6 +90,16 @@ function CourseName({courseName}) {
 
     useEffect(() => {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
+        
+        // Auto-scroll to the active lesson
+        setTimeout(() => {
+            if (activeElementRef.current) {
+                activeElementRef.current.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 100);
     }, [currentVideoFileIndex]);
 
     const collapseSideBar = () => {
@@ -175,6 +186,7 @@ function CourseName({courseName}) {
                                         .map((file, fileIndex) => (
                                             <div
                                                 key={fileIndex}
+                                                ref={file.fileName === currentVideo ? activeElementRef : null}
                                                 className={`modern-lesson-item ${
                                                     file.fileName === currentVideo ? 'active' : ''
                                                 }`}
