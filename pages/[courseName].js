@@ -1,14 +1,14 @@
 import Link from 'next/link';
-import {useRouter} from 'next/router';
+import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {BASE_CDN_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
 
 function CourseName({courseName}) {
-    const router = useRouter();
-    const topic = router.query.topic;
-    const lesson = router.query.lesson;
+    const searchParams = useSearchParams();
+    const topic = searchParams.get('topic');
+    const lesson = searchParams.get('lesson');
     const course = courses.find((c) => c.name === courseName);
     const videoFileList = course
         ? course.topics.flatMap((t) => {
