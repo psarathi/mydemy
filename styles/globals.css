@@ -1047,6 +1047,12 @@ input:checked + .slider:before {
     color: #ffffff !important;
 }
 
+/* Fix stat-badge background in dark mode */
+[data-theme="dark"] .stat-badge {
+    background: rgba(30, 30, 60, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
 /* Preview Placeholder */
 .preview-placeholder {
     display: flex;
