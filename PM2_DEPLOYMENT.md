@@ -10,7 +10,21 @@ This guide explains how to deploy and manage the Mydemy application using PM2.
 
 ## Configuration
 
-### 1. Update ecosystem.config.js
+### 1. Environment Variables
+
+You can configure environment variables in multiple ways:
+
+#### Option A: Using .env files (Recommended for development)
+Create a `.env` file in the project root:
+```bash
+# .env file
+NEXT_PUBLIC_BASE_CDN_PATH=http://your-server.com:5555
+COURSES_FOLDER=/path/to/your/courses
+KAFKA_SERVER=your-kafka-server.com
+KAFKA_SERVER_PORT=9092
+```
+
+#### Option B: Update ecosystem.config.js (Recommended for production)
 
 Before deploying, update the following values in `ecosystem.config.js`:
 

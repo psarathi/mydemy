@@ -12,7 +12,7 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 3000,
-        BASE_CDN_PATH: 'http://192.168.1.141:5555',
+        NEXT_PUBLIC_BASE_CDN_PATH: 'http://192.168.1.141:5555',
         COURSES_FOLDER: '/Volumes/medianas/Videos',
         KAFKA_SERVER: '192.168.1.141',
         KAFKA_SERVER_PORT: '9092'
@@ -20,7 +20,7 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000,
-        BASE_CDN_PATH: 'http://your-production-server.com:5555', // Update with production CDN URL
+        NEXT_PUBLIC_BASE_CDN_PATH: 'http://your-production-server.com:5555', // Update with production CDN URL
         COURSES_FOLDER: '/var/www/courses', // Update with production courses path
         KAFKA_SERVER: 'your-kafka-server.com', // Update with production Kafka server
         KAFKA_SERVER_PORT: '9092'
@@ -28,7 +28,7 @@ module.exports = {
       env_staging: {
         NODE_ENV: 'staging',
         PORT: 3001,
-        BASE_CDN_PATH: 'http://staging-server.com:5555', // Update with staging CDN URL
+        NEXT_PUBLIC_BASE_CDN_PATH: 'http://staging-server.com:5555', // Update with staging CDN URL
         COURSES_FOLDER: '/var/staging/courses', // Update with staging courses path
         KAFKA_SERVER: 'staging-kafka-server.com', // Update with staging Kafka server
         KAFKA_SERVER_PORT: '9092'

@@ -1,3 +1,6 @@
+// Load environment variables from .env files (supports .env.local, .env.production, etc.)
+require('dotenv').config({ path: ['.env.local', '.env'] });
+
 const fs = require('fs');
 const path = require('path');
 const COURSES_FOLDER = require('./constants').COURSES_FOLDER;

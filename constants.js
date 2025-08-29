@@ -1,5 +1,7 @@
 // Use environment variables with fallbacks
-exports.BASE_CDN_PATH = process.env.BASE_CDN_PATH || 'http://192.168.1.141:5555';
+// BASE_CDN_PATH needs NEXT_PUBLIC_ prefix since it's used in client-side code
+exports.BASE_CDN_PATH = process.env.NEXT_PUBLIC_BASE_CDN_PATH || 'http://192.168.1.141:5555';
+// COURSES_FOLDER is server-side only
 exports.COURSES_FOLDER = process.env.COURSES_FOLDER || '/Volumes/medianas/Videos';
 exports.LOCAL_CDN = 'Videos';
 exports.COURSE_PATH = 'courses';
