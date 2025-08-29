@@ -1018,8 +1018,33 @@ input:checked + .slider:before {
 }
 
 [data-theme="dark"] .stat-label {
-    color: #e2e8f0 !important;
-    font-weight: 700;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}
+
+/* More specific overrides for preview stats */
+[data-theme="dark"] .preview-header .stat-label {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .preview-stats .stat-label {
+    color: #ffffff !important;
+}
+
+/* Nuclear option - override any stat-label in dark mode */
+[data-theme="dark"] span.stat-label {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}
+
+[data-theme="dark"] .preview-content .stat-label {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .course-stats .stat-label {
+    color: #ffffff !important;
 }
 
 /* Preview Placeholder */
