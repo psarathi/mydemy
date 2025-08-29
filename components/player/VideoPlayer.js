@@ -82,15 +82,6 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
             <div className='video-header'>
                 <div className='video-info'>
                     <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
-                    {videoDuration && (
-                        <span className='video-duration'>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12,6 12,12 16,14"></polyline>
-                            </svg>
-                            {videoDuration}
-                        </span>
-                    )}
                 </div>
                 <div className='video-controls'>
                     <button 
@@ -127,6 +118,15 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                             <line x1="19" y1="5" x2="19" y2="19"></line>
                         </svg>
                     </button>
+                    {videoDuration && (
+                        <span className='video-duration'>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12,6 12,12 16,14"></polyline>
+                            </svg>
+                            {videoDuration}
+                        </span>
+                    )}
                 </div>
             </div>
             
