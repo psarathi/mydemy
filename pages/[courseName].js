@@ -4,12 +4,15 @@ import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {BASE_CDN_PATH, LOCAL_CDN} from '../constants';
 import courses from '../courses.json';
+import {addToHistory} from '../utils/courseTracking';
+import {useSession} from 'next-auth/react';
 
 function CourseName({courseName}) {
     const searchParams = useSearchParams();
     const topic = searchParams.get('topic');
     const lesson = searchParams.get('lesson');
     const course = courses.find((c) => c.name === courseName);
+    const {data: session} = useSession();
     const videoFileList = course
         ? course.topics.flatMap((t) => {
               return t.files
@@ -91,6 +94,11 @@ function CourseName({courseName}) {
     useEffect(() => {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
         
+        // Track course view history
+        if (course && session) {
+            addToHistory(course, session);
+        }
+        
         // Auto-scroll to the active lesson
         setTimeout(() => {
             if (activeElementRef.current) {
@@ -100,7 +108,7 @@ function CourseName({courseName}) {
                 });
             }
         }, 100);
-    }, [currentVideoFileIndex]);
+    }, [currentVideoFileIndex, course]);
 
     const collapseSideBar = () => {
         setIsSidebarCollapsed(true);

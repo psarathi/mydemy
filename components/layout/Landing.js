@@ -4,6 +4,10 @@ import React, {useEffect, useRef, useState} from 'react';
 import courses from '../../courses.json';
 import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
+import HamburgerMenu from '../common/HamburgerMenu';
+import FavoriteButton from '../common/FavoriteButton';
+import {addToHistory} from '../../utils/courseTracking';
+import {useSession} from 'next-auth/react';
 
 function Landing({search_term = '', exact}) {
     exact = exact?.toLowerCase() === 'true';
@@ -12,6 +16,7 @@ function Landing({search_term = '', exact}) {
     const [exactSearch, setExactSearch] = useState(exact);
     const [previewCourse, setPreviewCourse] = useState({});
     const searchField = useRef(null);
+    const {data: session} = useSession();
     useEffect(() => {
         if (!searchTerm) {
             setCourseList(courses);
@@ -50,8 +55,15 @@ function Landing({search_term = '', exact}) {
             : setPreviewCourse(course);
     }
 
+    const handleCourseClick = (course) => {
+        if (session) {
+            addToHistory(course, session);
+        }
+    };
+
     return (
         <div className='modern-landing-container'>
+            <HamburgerMenu />
             <header className='landing-header'>
                 <div className='header-content'>
                     <div className='brand-section'>
@@ -63,8 +75,20 @@ function Landing({search_term = '', exact}) {
                                 </svg>
                             </span>
                             Mydemy
+                            {session && (
+                                <span className='logged-in-indicator' title={`Signed in as ${session.user.name}`}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M20 6L9 17l-5-5"></path>
+                                    </svg>
+                                </span>
+                            )}
                         </h1>
-                        <p className='brand-subtitle'>Your personal learning platform</p>
+                        <p className='brand-subtitle'>
+                            Your personal learning platform
+                            {session && (
+                                <span className='welcome-text'> • Welcome back, {session.user.name?.split(' ')[0]}!</span>
+                            )}
+                        </p>
                     </div>
                     <div className='header-actions'>
                         <ThemeToggle />
@@ -111,7 +135,7 @@ function Landing({search_term = '', exact}) {
                             className='course-card'
                             onMouseEnter={(event) => showCourseDetails(event, course)}
                         >
-                            <Link href={`/${course.name}`} className='course-link'>
+                            <Link href={`/${course.name}`} className='course-link' onClick={() => handleCourseClick(course)}>
                                 <div className='course-card-content'>
                                     <h3 className='course-title'>{course.name}</h3>
                                     <div className='course-stats'>
@@ -132,12 +156,13 @@ function Landing({search_term = '', exact}) {
                                     </div>
                                 </div>
                             </Link>
-                            <div className='preview-btn-container'>
+                            <div className='course-card-actions'>
+                                <FavoriteButton course={course} />
                                 <button
                                     className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
                                     aria-label={`Preview ${course.name}`}
                                 >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                         <circle cx="12" cy="12" r="3"></circle>
                                     </svg>
