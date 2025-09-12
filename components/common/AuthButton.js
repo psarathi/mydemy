@@ -1,4 +1,5 @@
 import {useSession, signIn, signOut} from 'next-auth/react'
+import Image from 'next/image'
 
 export default function AuthButton() {
     const {data: session, status} = useSession()
@@ -17,10 +18,12 @@ export default function AuthButton() {
             <div className='auth-user-info'>
                 <div className='auth-user-details'>
                     {session.user.image && (
-                        <img
+                        <Image
                             src={session.user.image}
                             alt={session.user.name}
                             className='auth-user-avatar'
+                            width={40}
+                            height={40}
                         />
                     )}
                     <div className='auth-user-text'>
