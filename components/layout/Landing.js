@@ -8,6 +8,7 @@ import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import {addToHistory} from '../../utils/courseTracking';
 import {useSession} from 'next-auth/react';
+import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 
 function Landing({search_term = '', exact}) {
     exact = exact?.toLowerCase() === 'true';
@@ -151,7 +152,7 @@ function Landing({search_term = '', exact}) {
                                                 <polygon points="23 7 16 12 23 17 23 7"></polygon>
                                                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                                             </svg>
-                                            {course.topics?.reduce((a, t) => a + (t.files?.length || 0), 0) || 0} lessons
+                                            {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
                                         </span>
                                     </div>
                                 </div>
@@ -185,7 +186,7 @@ function Landing({search_term = '', exact}) {
                                 </div>
                                 <div className='stat-badge'>
                                     <span className='stat-number'>
-                                        {previewCourse?.topics?.reduce((a, t) => a + (t.files?.length || 0), 0) || 0}
+                                        {previewCourse?.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0}
                                     </span>
                                     <span className='stat-label'>Lessons</span>
                                 </div>
@@ -211,7 +212,7 @@ function Landing({search_term = '', exact}) {
                                             </Link>
                                         </div>
                                         <div className='lessons-list'>
-                                            {topic.files?.filter(f => f.ext === '.mp4').map((f, j) => (
+                                            {topic.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).map((f, j) => (
                                                 <Link
                                                     key={j}
                                                     href={{

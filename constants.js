@@ -19,3 +19,18 @@ exports.CONSOLE_COLOR_THEME = {
     error: 'red',
 };
 exports.COURSES_FILE_NAME = 'courses.json';
+
+// Supported video file extensions
+exports.SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
+
+// Video MIME types mapping
+exports.VIDEO_MIME_TYPES = {
+    '.mp4': 'video/mp4',
+    '.avi': 'video/x-msvideo',
+    '.mov': 'video/quicktime',
+    '.mkv': 'video/x-matroska',
+    '.webm': 'video/webm',
+    '.flv': 'video/x-flv',
+    '.wmv': 'video/x-ms-wmv',
+    '.m4v': 'video/mp4'
+};

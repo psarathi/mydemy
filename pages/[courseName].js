@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {BASE_CDN_PATH, LOCAL_CDN} from '../constants';
+import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '../constants';
 import courses from '../courses.json';
 import {addToHistory} from '../utils/courseTracking';
 import {useSession} from 'next-auth/react';
@@ -16,7 +16,7 @@ function CourseName({courseName}) {
     const videoFileList = course
         ? course.topics.flatMap((t) => {
               return t.files
-                  .filter((f) => f.ext === '.mp4')
+                  .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
                   .map((f) => getFileName(course, t, f));
           })
         : [];
@@ -48,7 +48,7 @@ function CourseName({courseName}) {
         videoFileList[currentVideoFileIndex]
     );
     const [subtitlesFile, setSubtitlesFile] = useState(
-        videoFileList[0] ? videoFileList[0].replace('mp4', 'vtt') : ''
+        videoFileList[0] ? videoFileList[0].replace(/\.[^.]+$/, '.vtt') : ''
     );
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const activeElementRef = useRef(null);
@@ -80,14 +80,14 @@ function CourseName({courseName}) {
                 : currentVideoFileIndex + 1;
         return {
             name: videoFileList[index],
-            subtitles: videoFileList[index].replace('mp4', 'vtt'),
+            subtitles: videoFileList[index].replace(/\.[^.]+$/, '.vtt'),
         };
     };
 
     const playSelectedVideo = (fileName) => {
         const index = videoFileList.indexOf(fileName);
         setVideoFile(videoFileList[index]);
-        setSubtitlesFile(videoFileList[index].replace('mp4', 'vtt'));
+        setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
         setCurrentVideoFileIndex(index);
     };
 
@@ -184,13 +184,13 @@ function CourseName({courseName}) {
                                 <div className='modern-topic-header'>
                                     <h3>{topic.name}</h3>
                                     <span className='topic-lesson-count'>
-                                        {topic.files.filter(f => f.ext === '.mp4').length} lessons
+                                        {topic.files.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length} lessons
                                     </span>
                                 </div>
                                 
                                 <div className='modern-lessons-list'>
                                     {topic.files
-                                        .filter((f) => f.ext === '.mp4')
+                                        .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
                                         .map((file, fileIndex) => (
                                             <div
                                                 key={fileIndex}

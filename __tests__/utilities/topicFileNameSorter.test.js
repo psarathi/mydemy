@@ -72,4 +72,20 @@ describe('topicFileNameSorter', () => {
         expect(sorted[1].name).toBe('Video C - Special');
         expect(sorted[2].name).toBe('Video Z (Final)');
     });
+
+    test('sorts files with different video formats', () => {
+        const files = [
+            {name: '03 Video WebM', fileName: '03 Video WebM.webm', ext: '.webm'},
+            {name: '01 Video MP4', fileName: '01 Video MP4.mp4', ext: '.mp4'},
+            {name: '02 Video AVI', fileName: '02 Video AVI.avi', ext: '.avi'},
+            {name: '04 Video MOV', fileName: '04 Video MOV.mov', ext: '.mov'}
+        ];
+
+        const sorted = files.sort(topicFileNameSorter);
+
+        expect(sorted[0].name).toBe('01 Video MP4');
+        expect(sorted[1].name).toBe('02 Video AVI');
+        expect(sorted[2].name).toBe('03 Video WebM');
+        expect(sorted[3].name).toBe('04 Video MOV');
+    });
 });

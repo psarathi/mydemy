@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {BASE_CDN_PATH} from '../../constants';
+import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '../../constants';
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
@@ -49,7 +49,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         const pathParts = currentVideo.split('/');
         let duration = '';
         return `${pathParts[pathParts.length - 1].replace(
-            '.mp4',
+            /\.[^.]+$/,
             ''
         )} ${duration}`;
     };
@@ -150,7 +150,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                         >
                             <source
                                 src={`${BASE_CDN_PATH}/${currentVideo}`}
-                                type='video/mp4'
+                                type={(() => {
+                                    const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
+                                    return VIDEO_MIME_TYPES[ext] || 'video/mp4';
+                                })()}
                             />
                             <p className='video-fallback'>
                                 Your browser doesn&apos;t support HTML5 video. 

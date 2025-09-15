@@ -3,9 +3,9 @@ const path = require('path');
 const topicFileNameSorter = require('./topicFileNameSorter');
 const topicNameSorter = require('./topicNameSorter');
 const colors = require('colors');
-const COLOR_THEME = require('../constants').CONSOLE_COLOR_THEME;
+const { CONSOLE_COLOR_THEME, SUPPORTED_VIDEO_EXTENSIONS } = require('../constants');
 
-colors.setTheme(COLOR_THEME);
+colors.setTheme(CONSOLE_COLOR_THEME);
 
 let rootCourseFolder = null;
 let courses = [];
@@ -56,7 +56,7 @@ const fetchCourseListings = (dirPath, sorted = true) => {
                     (topic) => topic.name === topicName
                 );
                 //don't include anything other than the video and the subtitle files
-                if (topicDetails.ext.match(/.srt|.mp4/g)) {
+                if (topicDetails.ext === '.srt' || SUPPORTED_VIDEO_EXTENSIONS.includes(topicDetails.ext)) {
                     courses[courseIndex].topics[topicIndex].files.push({
                         fileName: `${topicDetails.base}`,
                         name: `${topicDetails.name}`,

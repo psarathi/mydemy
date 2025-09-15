@@ -238,4 +238,31 @@ describe('listDirectoriesWithTopics', () => {
         expect(result[1].name).toBe('CourseWithoutTopics');
         expect(result[1].topics[0].isTopicLess).toBe(true);
     });
+
+    test('processes multiple video formats', async () => {
+        const testPath = '/courses';
+        
+        mockFs.readdir
+            .mockResolvedValueOnce([
+                { name: 'Course1', isDirectory: () => true, isFile: () => false }
+            ])
+            .mockResolvedValueOnce([
+                { name: 'video1.mp4', isDirectory: () => false, isFile: () => true },
+                { name: 'video2.avi', isDirectory: () => false, isFile: () => true },
+                { name: 'video3.webm', isDirectory: () => false, isFile: () => true },
+                { name: 'video4.mov', isDirectory: () => false, isFile: () => true },
+                { name: 'video5.mkv', isDirectory: () => false, isFile: () => true },
+                { name: 'subtitle.srt', isDirectory: () => false, isFile: () => true }
+            ]);
+
+        const result = await listDirectoriesWithTopics(testPath, [], false, false);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].topics[0].files).toHaveLength(6); // 5 videos + 1 subtitle
+        
+        const videoFiles = result[0].topics[0].files.filter(f => 
+            ['.mp4', '.avi', '.webm', '.mov', '.mkv'].includes(f.fileName.split('.').pop())
+        );
+        expect(videoFiles).toHaveLength(5);
+    });
 });
