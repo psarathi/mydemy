@@ -1,7 +1,6 @@
 // 'use client';
 import Link from 'next/link';
 import React, {useEffect, useRef, useState} from 'react';
-import courses from '../../courses.json';
 import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
@@ -9,15 +8,26 @@ import FavoriteButton from '../common/FavoriteButton';
 import {addToHistory} from '../../utils/courseTracking';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
+import {useCourses} from '../../hooks/useCourses';
 
-function Landing({search_term = '', exact}) {
+function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
     const [searchTerm, setSearchTerm] = useState(search_term);
-    const [courseList, setCourseList] = useState(courses);
+    const [courseList, setCourseList] = useState([]);
     const [exactSearch, setExactSearch] = useState(exact);
     const [previewCourse, setPreviewCourse] = useState({});
     const searchField = useRef(null);
     const {data: session} = useSession();
+    const {courses, isLoading, mutate} = useCourses();
+
+    // Expose refresh function to parent
+    useEffect(() => {
+        if (refreshCoursesRef) {
+            refreshCoursesRef.current = mutate;
+        }
+    }, [refreshCoursesRef, mutate]);
+
+    // Filter courses based on search
     useEffect(() => {
         if (!searchTerm) {
             setCourseList(courses);
@@ -35,7 +45,7 @@ function Landing({search_term = '', exact}) {
                 )
             );
         }
-    }, [searchTerm, exactSearch]);
+    }, [searchTerm, exactSearch, courses]);
 
     useEffect(() => {
         function handleKeyDown(e) {
@@ -61,6 +71,31 @@ function Landing({search_term = '', exact}) {
             addToHistory(course, session);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className='modern-landing-container'>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '400px',
+                    flexDirection: 'column',
+                    gap: '16px'
+                }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '4px solid rgba(0, 0, 0, 0.1)',
+                        borderTop: '4px solid #007bff',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                    }} />
+                    <p style={{color: 'var(--text-secondary)', fontSize: '14px'}}>Loading courses...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className='modern-landing-container'>

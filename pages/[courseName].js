@@ -3,14 +3,15 @@ import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '../constants';
-import courses from '../courses.json';
 import {addToHistory} from '../utils/courseTracking';
 import {useSession} from 'next-auth/react';
+import {useCourses} from '../hooks/useCourses';
 
 function CourseName({courseName}) {
     const searchParams = useSearchParams();
     const topic = searchParams.get('topic');
     const lesson = searchParams.get('lesson');
+    const {courses, isLoading} = useCourses();
     const course = courses.find((c) => c.name === courseName);
     const {data: session} = useSession();
     const videoFileList = course
@@ -127,6 +128,31 @@ function CourseName({courseName}) {
         return !t.isTopicLess
             ? `${LOCAL_CDN}/${c.name}/${t.name}/${f.fileName}`
             : `${LOCAL_CDN}/${c.name}/${f.fileName}`;
+    }
+
+    if (isLoading) {
+        return (
+            <div className='modern-course-container'>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '400px',
+                    flexDirection: 'column',
+                    gap: '16px'
+                }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '4px solid rgba(0, 0, 0, 0.1)',
+                        borderTop: '4px solid #007bff',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                    }} />
+                    <p style={{color: 'var(--text-secondary)', fontSize: '14px'}}>Loading course...</p>
+                </div>
+            </div>
+        );
     }
 
     return course ? (
@@ -286,6 +312,8 @@ export async function getStaticProps({params: {courseName}}) {
 }
 
 export async function getStaticPaths() {
+    // Import courses for build-time static generation only
+    const courses = require('../courses.json');
     return {
         paths: courses.map((c) => ({
             params: {
