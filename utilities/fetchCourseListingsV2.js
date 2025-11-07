@@ -55,7 +55,10 @@ async function listDirectoriesWithTopics(
                         }
                         topicObj.files.push(fileObj);
                     }
-                    course.topics.push(topicObj);
+                    // Only add topic if it has files
+                    if (topicObj.files.length > 0) {
+                        course.topics.push(topicObj);
+                    }
                 } else {
                     await Promise.all(
                         subItems.map(async (subItem) => {
@@ -90,7 +93,10 @@ async function listDirectoriesWithTopics(
                                     topicObj.files.push(fileObj);
                                 }
 
-                                course.topics.push(topicObj);
+                                // Only add topic if it has files
+                                if (topicObj.files.length > 0) {
+                                    course.topics.push(topicObj);
+                                }
                             }
                         })
                     );
