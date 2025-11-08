@@ -2,13 +2,14 @@ const fs = require('node:fs/promises');
 const path = require('path');
 const {COURSES_FOLDER, COURSES_FILE_NAME} = require('./constants');
 const fetchCourseListingsV2 = require('./utilities/fetchCourseListingsV2');
+const fetchCourseListingsV3 = require('./utilities/fetchCourseListingsV3');
 const fetchCourses = async (
     coursesToProcess = [],
     logCourseDetails = false
 ) => {
     console.log('fetching courses...');
     const currentDirectory = path.join(COURSES_FOLDER);
-    let courses = await fetchCourseListingsV2(
+    let courses = await fetchCourseListingsV3(
         currentDirectory,
         coursesToProcess,
         true,
