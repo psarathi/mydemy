@@ -15,6 +15,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [searchTerm, setSearchTerm] = useState(search_term);
     const [courseList, setCourseList] = useState([]);
     const [exactSearch, setExactSearch] = useState(exact);
+    const [searchInLessons, setSearchInLessons] = useState(false);
     const [previewCourse, setPreviewCourse] = useState({});
     const searchField = useRef(null);
     const {data: session} = useSession();
@@ -33,19 +34,38 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             setCourseList(courses);
         } else {
             let searchTermParts = searchTerm.trim().split(' ');
-            setCourseList(
-                courses.filter((c) =>
-                    !exactSearch
-                        ? searchTermParts.some(
-                              (p) => c.name.toLowerCase().indexOf(p) !== -1
-                          )
-                        : searchTermParts.every((p) =>
-                              c.name.toLowerCase().split(' ').includes(p)
-                          )
-                )
-            );
+
+            const filterCourses = (c) => {
+                const courseNameMatch = !exactSearch
+                    ? searchTermParts.some(
+                          (p) => c.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
+                      )
+                    : searchTermParts.every((p) =>
+                          c.name.toLowerCase().split(' ').includes(p.toLowerCase())
+                      );
+
+                // If searching in lessons, also check lesson names
+                if (searchInLessons && !courseNameMatch) {
+                    const hasMatchingLesson = c.topics?.some((topic) =>
+                        topic.files?.some((file) =>
+                            !exactSearch
+                                ? searchTermParts.some(
+                                      (p) => file.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
+                                  )
+                                : searchTermParts.every((p) =>
+                                      file.name.toLowerCase().split(' ').includes(p.toLowerCase())
+                                  )
+                        )
+                    );
+                    return hasMatchingLesson;
+                }
+
+                return courseNameMatch;
+            };
+
+            setCourseList(courses.filter(filterCourses));
         }
-    }, [searchTerm, exactSearch, courses]);
+    }, [searchTerm, exactSearch, searchInLessons, courses]);
 
     useEffect(() => {
         function handleKeyDown(e) {
@@ -177,6 +197,13 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                 callback={setExactSearch}
                             />
                             <span className='toggle-label'>Exact match</span>
+                        </label>
+                        <label className='exact-search-toggle'>
+                            <SwitchCheckbox
+                                initialState={searchInLessons}
+                                callback={setSearchInLessons}
+                            />
+                            <span className='toggle-label'>Search in lessons</span>
                         </label>
                     </div>
                 </div>
