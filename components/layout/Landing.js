@@ -52,6 +52,10 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             if (e.metaKey && (e.key === 'K' || e.key === 'k')) {
                 searchField.current.focus();
             }
+            // Clear search on Escape key
+            if (e.key === 'Escape' && searchField.current === document.activeElement) {
+                setSearchTerm('');
+            }
         }
 
         document.addEventListener('keydown', handleKeyDown);
@@ -70,6 +74,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         if (session) {
             addToHistory(course, session);
         }
+    };
+
+    const clearSearch = () => {
+        setSearchTerm('');
+        searchField.current?.focus();
     };
 
     if (isLoading) {
@@ -147,6 +156,19 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        {searchTerm && (
+                            <button
+                                className='search-clear-btn'
+                                onClick={clearSearch}
+                                aria-label='Clear search'
+                                type='button'
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        )}
                     </div>
                     <div className='search-controls'>
                         <label className='exact-search-toggle'>
