@@ -241,7 +241,7 @@ describe('Landing', () => {
         );
     });
 
-    test('does not call addToHistory when not authenticated', async () => {
+    test('calls addToHistory even when not authenticated', async () => {
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
         const user = userEvent.setup();
 
@@ -250,7 +250,7 @@ describe('Landing', () => {
         const courseLink = screen.getByText('React Basics');
         await user.click(courseLink);
 
-        expect(mockAddToHistory).not.toHaveBeenCalled();
+        expect(mockAddToHistory).toHaveBeenCalled();
     });
 
     test('handles multi-word search terms', async () => {

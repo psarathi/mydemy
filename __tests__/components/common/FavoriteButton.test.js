@@ -34,15 +34,13 @@ describe('FavoriteButton', () => {
         mockIsFavorite.mockReturnValue(false);
     });
 
-    test('renders null when user is not authenticated', () => {
-        mockUseSession.mockReturnValue({
-            data: null,
-            status: 'unauthenticated'
-        });
+    test('renders favorite button even when user is not authenticated', () => {
+        render(<FavoriteButton course={mockCourse} />);
 
-        const {container} = render(<FavoriteButton course={mockCourse} />);
-        
-        expect(container.firstChild).toBeNull();
+        const button = screen.getByRole('button');
+        expect(button).toBeInTheDocument();
+        expect(button).toHaveClass('favorite-btn');
+        expect(button).toHaveAttribute('aria-label', 'Add to favorites');
     });
 
     test('renders favorite button when user is authenticated', () => {
@@ -112,32 +110,15 @@ describe('FavoriteButton', () => {
         expect(mockToggleFavorite).toHaveBeenCalledWith(mockCourse);
     });
 
-    test('does not call toggleFavorite when user is not authenticated and button is clicked', async () => {
-        mockUseSession.mockReturnValue({
-            data: null,
-            status: 'unauthenticated'
-        });
-
+    test('calls toggleFavorite even when user is not authenticated', async () => {
         const user = userEvent.setup();
-        
-        // Since the component returns null when not authenticated, we need to mock it differently
-        mockUseSession.mockReturnValue({
-            data: mockSession,
-            status: 'authenticated'
-        });
 
-        const {rerender} = render(<FavoriteButton course={mockCourse} />);
+        render(<FavoriteButton course={mockCourse} />);
 
-        // Now simulate the case where session becomes null after render
-        mockUseSession.mockReturnValue({
-            data: null,
-            status: 'unauthenticated'
-        });
+        const button = screen.getByRole('button');
+        await user.click(button);
 
-        rerender(<FavoriteButton course={mockCourse} />);
-        
-        // Component should return null, so no button should be present
-        expect(screen.queryByRole('button')).not.toBeInTheDocument();
+        expect(mockToggleFavorite).toHaveBeenCalledWith(mockCourse);
     });
 
     test('applies custom className prop', () => {

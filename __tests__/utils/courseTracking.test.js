@@ -59,11 +59,19 @@ describe('courseTracking utilities', () => {
             );
         });
 
-        test('does not add to history when no session', () => {
+        test('adds to history even when no session (for logged out users)', () => {
             addToHistory(mockCourse, null);
 
-            expect(localStorageMock.setItem).not.toHaveBeenCalled();
-            expect(mockDispatchEvent).not.toHaveBeenCalled();
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'courseHistory',
+                expect.stringContaining(mockCourse.name)
+            );
+
+            expect(mockDispatchEvent).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'courseHistoryUpdated'
+                })
+            );
         });
 
         test('removes existing course and adds to beginning', () => {
@@ -167,11 +175,16 @@ describe('courseTracking utilities', () => {
             );
         });
 
-        test('does not toggle favorite when no session', () => {
+        test('toggles favorite even when no session (for logged out users)', () => {
+            localStorageMock.getItem.mockReturnValue('[]');
+
             const result = toggleFavorite(mockCourse, null);
 
-            expect(result).toBeUndefined();
-            expect(localStorageMock.setItem).not.toHaveBeenCalled();
+            expect(result).toBe(true);
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'courseFavorites',
+                expect.stringContaining(mockCourse.name)
+            );
         });
 
         test('adds timestamp when adding to favorites', () => {
@@ -265,11 +278,16 @@ describe('courseTracking utilities', () => {
         });
 
         test('toggleFavorite returns undefined when window is undefined', () => {
+            // Store the original window
+            const originalWindow = global.window;
             delete global.window;
 
             const result = toggleFavorite(mockCourse, null);
 
             expect(result).toBeUndefined();
+
+            // Restore window
+            global.window = originalWindow;
         });
 
         test('getFavorites returns empty array when window is undefined', () => {

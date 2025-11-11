@@ -91,9 +91,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     }
 
     const handleCourseClick = (course) => {
-        if (session) {
-            addToHistory(course, session);
-        }
+        addToHistory(course, session);
     };
 
     const clearSearch = () => {

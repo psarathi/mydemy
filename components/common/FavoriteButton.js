@@ -1,43 +1,29 @@
 import {useState, useEffect} from 'react';
-import {useSession} from 'next-auth/react';
 import {toggleFavorite, isFavorite} from '../../utils/courseTracking';
 
 export default function FavoriteButton({course, className = ''}) {
     const [isCourseFavorite, setIsCourseFavorite] = useState(false);
-    const {data: session} = useSession();
 
     useEffect(() => {
-        if (session) {
-            setIsCourseFavorite(isFavorite(course.name));
+        setIsCourseFavorite(isFavorite(course.name));
 
-            // Listen for favorite updates
-            const handleFavoriteUpdate = (event) => {
-                if (event.detail.course.name === course.name) {
-                    setIsCourseFavorite(event.detail.isFavorite);
-                }
-            };
+        // Listen for favorite updates
+        const handleFavoriteUpdate = (event) => {
+            if (event.detail.course.name === course.name) {
+                setIsCourseFavorite(event.detail.isFavorite);
+            }
+        };
 
-            window.addEventListener('courseFavoritesUpdated', handleFavoriteUpdate);
-            return () => window.removeEventListener('courseFavoritesUpdated', handleFavoriteUpdate);
-        }
-    }, [course.name, session]);
+        window.addEventListener('courseFavoritesUpdated', handleFavoriteUpdate);
+        return () => window.removeEventListener('courseFavoritesUpdated', handleFavoriteUpdate);
+    }, [course.name]);
 
     const handleToggleFavorite = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (!session) {
-            // Could show a tooltip or redirect to sign in
-            return;
-        }
-        
+
         toggleFavorite(course);
     };
-
-    // Don't render the button if user is not logged in
-    if (!session) {
-        return null;
-    }
 
     return (
         <button

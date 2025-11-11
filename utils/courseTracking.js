@@ -1,25 +1,25 @@
 // Course tracking utilities
 export const addToHistory = (course, session = null) => {
-    if (typeof window === 'undefined' || !session) return;
-    
+    if (typeof window === 'undefined') return;
+
     const history = JSON.parse(localStorage.getItem('courseHistory') || '[]');
-    
+
     // Remove existing entry if it exists
     const filteredHistory = history.filter(item => item.name !== course.name);
-    
+
     // Add to beginning with current timestamp
     const newHistory = [{
         ...course,
         viewedAt: new Date().toISOString()
     }, ...filteredHistory];
-    
+
     // Keep only last 50 items
     const trimmedHistory = newHistory.slice(0, 50);
-    
+
     localStorage.setItem('courseHistory', JSON.stringify(trimmedHistory));
-    
+
     // Dispatch custom event for components to listen to
-    window.dispatchEvent(new CustomEvent('courseHistoryUpdated', { 
+    window.dispatchEvent(new CustomEvent('courseHistoryUpdated', {
         detail: { course, history: trimmedHistory }
     }));
 };
@@ -30,11 +30,11 @@ export const getHistory = () => {
 };
 
 export const toggleFavorite = (course, session = null) => {
-    if (typeof window === 'undefined' || !session) return;
-    
+    if (typeof window === 'undefined') return;
+
     const favorites = JSON.parse(localStorage.getItem('courseFavorites') || '[]');
     const isFavorite = favorites.some(fav => fav.name === course.name);
-    
+
     let newFavorites;
     if (isFavorite) {
         newFavorites = favorites.filter(fav => fav.name !== course.name);
@@ -44,14 +44,14 @@ export const toggleFavorite = (course, session = null) => {
             favoritedAt: new Date().toISOString()
         }];
     }
-    
+
     localStorage.setItem('courseFavorites', JSON.stringify(newFavorites));
-    
+
     // Dispatch custom event for components to listen to
-    window.dispatchEvent(new CustomEvent('courseFavoritesUpdated', { 
+    window.dispatchEvent(new CustomEvent('courseFavoritesUpdated', {
         detail: { course, favorites: newFavorites, isFavorite: !isFavorite }
     }));
-    
+
     return !isFavorite;
 };
 

@@ -94,12 +94,12 @@ function CourseName({courseName}) {
 
     useEffect(() => {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
-        
+
         // Track course view history
-        if (course && session) {
+        if (course) {
             addToHistory(course, session);
         }
-        
+
         // Auto-scroll to the active lesson
         setTimeout(() => {
             if (activeElementRef.current) {
