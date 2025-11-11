@@ -12,6 +12,9 @@ export default function Home() {
     const refreshCoursesRef = useRef(null);
 
     useEffect(() => {
+        // Only run in browser environment
+        if (typeof window === 'undefined') return;
+
         console.log('[SSE] Connecting to server notifications...');
         const eventSource = new EventSource('api/serverNotifier');
 
