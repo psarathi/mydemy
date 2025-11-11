@@ -12,7 +12,17 @@ import {useCourses} from '../../hooks/useCourses';
 
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
-    const [searchTerm, setSearchTerm] = useState(search_term);
+
+    // Load preserved search term from localStorage if no URL param provided
+    const getInitialSearchTerm = () => {
+        if (search_term) return search_term;
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('lastSearchTerm') || '';
+        }
+        return '';
+    };
+
+    const [searchTerm, setSearchTerm] = useState(getInitialSearchTerm);
     const [courseList, setCourseList] = useState([]);
     const [exactSearch, setExactSearch] = useState(exact);
     const [searchInLessons, setSearchInLessons] = useState(false);
@@ -27,6 +37,17 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             refreshCoursesRef.current = mutate;
         }
     }, [refreshCoursesRef, mutate]);
+
+    // Save search term to localStorage whenever it changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            if (searchTerm) {
+                localStorage.setItem('lastSearchTerm', searchTerm);
+            } else {
+                localStorage.removeItem('lastSearchTerm');
+            }
+        }
+    }, [searchTerm]);
 
     // Filter courses based on search
     useEffect(() => {
