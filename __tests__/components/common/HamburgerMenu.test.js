@@ -142,17 +142,17 @@ describe('HamburgerMenu', () => {
         expect(localStorageMock.getItem).toHaveBeenCalledWith('courseFavorites');
     });
 
-    test('does not show favorites section when not authenticated', () => {
+    test('shows favorites section even when not authenticated', () => {
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
 
         const {container} = render(<HamburgerMenu />);
-        
+
         // Open menu to check content
         const toggleButton = screen.getByRole('button', { name: 'Toggle menu' });
         fireEvent.click(toggleButton);
 
-        expect(screen.queryByText(/Favorites/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Recently Viewed/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Favorites/)).toBeInTheDocument();
+        expect(screen.queryByText(/Recently Viewed/)).toBeInTheDocument();
     });
 
     test('shows favorites section when authenticated', async () => {
@@ -300,14 +300,26 @@ describe('HamburgerMenu', () => {
         );
     });
 
-    test('does not toggle favorite when not authenticated', async () => {
+    test('can toggle favorites even when not authenticated', async () => {
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
-        
-        const component = render(<HamburgerMenu />);
-        
-        // Manually trigger handleToggleFavorite with no session
-        // This tests the early return in handleToggleFavorite
-        expect(localStorageMock.setItem).not.toHaveBeenCalled();
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(mockFavorites));
+
+        const user = userEvent.setup();
+        render(<HamburgerMenu />);
+
+        const toggleButton = screen.getByRole('button', { name: 'Toggle menu' });
+        await user.click(toggleButton);
+
+        // Favorites should be visible
+        expect(screen.getByText(/Favorites \(2\)/)).toBeInTheDocument();
+        expect(screen.getByText('Favorite Course 1')).toBeInTheDocument();
+
+        // Click remove favorite button
+        const favoriteButtons = screen.getAllByLabelText('Remove from favorites');
+        await user.click(favoriteButtons[0]);
+
+        // Should update localStorage
+        expect(localStorageMock.setItem).toHaveBeenCalled();
     });
 
     test('updates state when courseHistoryUpdated event is fired', async () => {
