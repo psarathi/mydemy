@@ -1228,13 +1228,20 @@ input:checked + .slider:before {
 /* Courses Header */
 .courses-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 0.5rem;
     flex-wrap: wrap;
     gap: 1rem;
     padding-right: 3rem;
     padding-left: 0.5rem;
+}
+
+.courses-header > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
 }
 
 .courses-header h1 {
@@ -1256,7 +1263,6 @@ input:checked + .slider:before {
     border: 1px solid var(--border);
     border-radius: calc(var(--radius) / 2);
     font-weight: 500;
-    margin-left: 1rem;
 }
 
 /* Bulk Tag Container */
@@ -1441,7 +1447,6 @@ input:checked + .slider:before {
     animation: fadeIn 0.3s ease;
     backdrop-filter: blur(10px);
     min-height: 100px;
-    max-height: 150px;
 }
 
 .course-card:hover {
