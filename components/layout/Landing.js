@@ -5,6 +5,7 @@ import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
+import TagList from '../common/TagList';
 import {addToHistory} from '../../utils/courseTracking';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
@@ -120,6 +121,22 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         searchField.current?.focus();
     };
 
+    const handleTagClick = (tag) => {
+        setSearchTerm(tag);
+        searchField.current?.focus();
+    };
+
+    // Listen for tag selection from HamburgerMenu
+    useEffect(() => {
+        const handleTagSelected = (e) => {
+            setSearchTerm(e.detail.tag);
+            searchField.current?.focus();
+        };
+
+        window.addEventListener('tagSelected', handleTagSelected);
+        return () => window.removeEventListener('tagSelected', handleTagSelected);
+    }, []);
+
     if (isLoading) {
         return (
             <div className='modern-landing-container'>
@@ -234,8 +251,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 
                 <div className='courses-grid'>
                     {courseList.map((course, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className='course-card'
                             onMouseEnter={(event) => showCourseDetails(event, course)}
                         >
@@ -257,6 +274,14 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                             </svg>
                                             {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
                                         </span>
+                                    </div>
+                                    <div className='course-tags'>
+                                        <TagList
+                                            courseName={course.name}
+                                            onTagClick={handleTagClick}
+                                            editable={true}
+                                            size="small"
+                                        />
                                     </div>
                                 </div>
                             </Link>
