@@ -991,9 +991,9 @@ input:checked + .slider:before {
 /* Modern Landing Container */
 .modern-landing-container {
     display: grid;
-    grid-template-columns: 1fr 1.4fr;
+    grid-template-columns: minmax(400px, 1fr) minmax(600px, 1.4fr);
     grid-template-rows: auto 1fr;
-    grid-template-areas: 
+    grid-template-areas:
         "header header"
         "courses preview";
     gap: 0;
@@ -1114,6 +1114,8 @@ input:checked + .slider:before {
     height: 100%;
     padding: 2rem 1rem 2rem 2rem;
     overflow: visible;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Search Section */
@@ -1375,10 +1377,12 @@ input:checked + .slider:before {
 /* Courses Grid */
 .courses-grid {
     display: grid;
+    grid-template-columns: 1fr;
     gap: 1rem;
     height: calc(100vh - 200px);
     overflow-y: auto;
     padding: 0.5rem 3rem 0.5rem 0.5rem;
+    align-content: start;
 }
 
 .courses-grid {
@@ -1431,6 +1435,8 @@ input:checked + .slider:before {
     cursor: pointer;
     animation: fadeIn 0.3s ease;
     backdrop-filter: blur(10px);
+    min-height: 100px;
+    max-height: 150px;
 }
 
 .course-card:hover {
@@ -1541,6 +1547,8 @@ input:checked + .slider:before {
     height: 100vh;
     backdrop-filter: blur(10px);
     margin: 2rem 2rem 2rem 1rem;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Preview Header */
