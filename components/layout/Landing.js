@@ -7,7 +7,7 @@ import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
 import {addToHistory} from '../../utils/courseTracking';
-import {addTag, getTags} from '../../utils/tagging';
+import {addTag, removeTag, getTags} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 import {useCourses} from '../../hooks/useCourses';
@@ -138,6 +138,24 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         searchField.current?.focus();
     };
 
+    const handleBulkAddTag = (tagValue) => {
+        if (!tagValue || tagValue.trim() === '') return;
+
+        // Add tag to all courses in the current filtered list
+        courseList.forEach(course => {
+            addTag(course, tagValue);
+        });
+    };
+
+    const handleBulkRemoveTag = (tagValue) => {
+        if (!tagValue || tagValue.trim() === '') return;
+
+        // Remove tag from all courses in the current filtered list
+        courseList.forEach(course => {
+            removeTag(course, tagValue);
+        });
+    };
+
     if (isLoading) {
         return (
             <div className='modern-landing-container'>
@@ -246,8 +264,55 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 </div>
                 
                 <div className='courses-header'>
-                    <h1>Courses</h1>
-                    <span className='course-count'>{courseList.length} available</span>
+                    <div>
+                        <h1>Courses</h1>
+                        <span className='course-count'>{courseList.length} available</span>
+                    </div>
+                    {courseList.length > 0 && (
+                        <div className='bulk-tag-container'>
+                            <div className='bulk-tag-section'>
+                                <input
+                                    type="text"
+                                    className="bulk-tag-input bulk-tag-add"
+                                    placeholder="Add tag to all..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            handleBulkAddTag(e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                <span className='bulk-tag-hint'>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Add to all
+                                </span>
+                            </div>
+                            <div className='bulk-tag-divider'></div>
+                            <div className='bulk-tag-section'>
+                                <input
+                                    type="text"
+                                    className="bulk-tag-input bulk-tag-remove"
+                                    placeholder="Remove tag from all..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            handleBulkRemoveTag(e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                <span className='bulk-tag-hint bulk-tag-hint-remove'>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Remove from all
+                                </span>
+                            </div>
+                            <span className='bulk-tag-count'>{courseList.length} {courseList.length === 1 ? 'course' : 'courses'}</span>
+                        </div>
+                    )}
                 </div>
                 
                 <div className='courses-grid'>
