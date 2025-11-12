@@ -99,7 +99,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
 
     useEffect(() => {
         function handleTagClick(event) {
-            setSearchTerm(event.detail.tag);
+            // Prepend '#' to trigger tag search
+            setSearchTerm(`#${event.detail.tag}`);
         }
 
         window.addEventListener('tagClicked', handleTagClick);
