@@ -5,8 +5,9 @@ import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
-import TagList from '../common/TagList';
+import TagButton from '../common/TagButton';
 import {addToHistory} from '../../utils/courseTracking';
+import {addTag, getTags} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 import {useCourses} from '../../hooks/useCourses';
@@ -54,6 +55,13 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     useEffect(() => {
         if (!searchTerm) {
             setCourseList(courses);
+        } else if (searchTerm.startsWith('#')) {
+            const tag = searchTerm.substring(1);
+            const filterCourses = (c) => {
+                const courseTags = getTags(c.name);
+                return courseTags.includes(tag);
+            };
+            setCourseList(courses.filter(filterCourses));
         } else {
             let searchTermParts = searchTerm.trim().split(' ');
 
@@ -90,6 +98,15 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     }, [searchTerm, exactSearch, searchInLessons, courses]);
 
     useEffect(() => {
+        function handleTagClick(event) {
+            setSearchTerm(event.detail.tag);
+        }
+
+        window.addEventListener('tagClicked', handleTagClick);
+        return () => window.removeEventListener('tagClicked', handleTagClick);
+    }, []);
+
+    useEffect(() => {
         function handleKeyDown(e) {
             if (e.metaKey && (e.key === 'K' || e.key === 'k')) {
                 searchField.current.focus();
@@ -120,22 +137,6 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         setSearchTerm('');
         searchField.current?.focus();
     };
-
-    const handleTagClick = (tag) => {
-        setSearchTerm(tag);
-        searchField.current?.focus();
-    };
-
-    // Listen for tag selection from HamburgerMenu
-    useEffect(() => {
-        const handleTagSelected = (e) => {
-            setSearchTerm(e.detail.tag);
-            searchField.current?.focus();
-        };
-
-        window.addEventListener('tagSelected', handleTagSelected);
-        return () => window.removeEventListener('tagSelected', handleTagSelected);
-    }, []);
 
     if (isLoading) {
         return (
@@ -276,17 +277,25 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         </span>
                                     </div>
                                     <div className='course-tags'>
-                                        <TagList
-                                            courseName={course.name}
-                                            onTagClick={handleTagClick}
-                                            editable={true}
-                                            size="small"
-                                        />
+                                        {getTags(course.name).map(tag => (
+                                            <TagButton key={tag} course={course} tag={tag} />
+                                        ))}
                                     </div>
                                 </div>
                             </Link>
                             <div className='course-card-actions'>
                                 <FavoriteButton course={course} />
+                                <input
+                                    type="text"
+                                    className="tag-input"
+                                    placeholder="Add tag"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            addTag(course, e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
                                 <button
                                     className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
                                     aria-label={`Preview ${course.name}`}

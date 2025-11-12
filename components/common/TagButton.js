@@ -1,51 +1,41 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { addTag, removeTag, getTags } from '../../utils/tagging';
 
-/**
- * TagButton component - displays a clickable tag
- * @param {string} tag - The tag text to display
- * @param {Function} onClick - Handler when tag is clicked to search
- * @param {Function} onRemove - Optional handler to remove the tag
- * @param {boolean} removable - Whether to show remove button (default: false)
- * @param {string} size - Size of the tag: 'small', 'medium', 'large' (default: 'medium')
- */
-export default function TagButton({
-  tag,
-  onClick,
-  onRemove,
-  removable = false,
-  size = 'medium'
-}) {
-  const handleClick = (e) => {
-    e.stopPropagation();
-    if (onClick) {
-      onClick(tag);
-    }
-  };
+export default function TagButton({ course, tag, className = '' }) {
+    const [isTagged, setIsTagged] = useState(false);
 
-  const handleRemove = (e) => {
-    e.stopPropagation();
-    if (onRemove) {
-      onRemove(tag);
-    }
-  };
+    useEffect(() => {
+        setIsTagged(getTags(course.name).includes(tag));
 
-  return (
-    <button
-      className={`tag-button tag-button-${size}`}
-      onClick={handleClick}
-      type="button"
-      title={`Search for: ${tag}`}
-    >
-      <span className="tag-text">{tag}</span>
-      {removable && onRemove && (
-        <span
-          className="tag-remove"
-          onClick={handleRemove}
-          title={`Remove tag: ${tag}`}
+        const handleTagUpdate = (event) => {
+            if (event.detail.courseName === course.name) {
+                setIsTagged(event.detail.tags.includes(tag));
+            }
+        };
+
+        window.addEventListener('courseTagsUpdated', handleTagUpdate);
+        return () => window.removeEventListener('courseTagsUpdated', handleTagUpdate);
+    }, [course.name, tag]);
+
+    const handleToggleTag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isTagged) {
+            removeTag(course, tag);
+        } else {
+            addTag(course, tag);
+        }
+    };
+
+    return (
+        <button
+            className={`tag-btn ${isTagged ? 'active' : ''} ${className}`}
+            onClick={handleToggleTag}
+            aria-label={isTagged ? `Remove tag ${tag}` : `Add tag ${tag}`}
+            title={isTagged ? `Remove tag ${tag}` : `Add tag ${tag}`}
         >
-          ×
-        </span>
-      )}
-    </button>
-  );
+            #{tag}
+        </button>
+    );
 }

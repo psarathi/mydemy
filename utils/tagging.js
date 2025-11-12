@@ -1,167 +1,103 @@
-// Utility functions for managing course tags in localStorage
+// Tagging utilities
+export const addTag = (course, tag) => {
+    if (typeof window === 'undefined' || !tag || tag.trim() === '') return;
 
-/**
- * Add tags to a course
- * @param {string} courseName - Name of the course
- * @param {string[]} tags - Array of tag strings to add
- * @returns {string[]} Updated array of tags for the course
- */
-export function addTags(courseName, tags) {
-  if (typeof window === 'undefined') return [];
+    const courseName = course.name;
+    const normalizedTag = tag.toLowerCase().trim();
+    const allTags = getAllTags();
 
-  const courseTags = getCourseTags();
-  const normalizedTags = tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0);
-
-  // Get existing tags or initialize empty array
-  const existingTags = courseTags[courseName] || [];
-
-  // Merge and deduplicate tags
-  const updatedTags = [...new Set([...existingTags, ...normalizedTags])];
-
-  // Update storage
-  courseTags[courseName] = updatedTags;
-  localStorage.setItem('courseTags', JSON.stringify(courseTags));
-
-  // Dispatch event for components to listen
-  window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
-    detail: { courseName, tags: updatedTags }
-  }));
-
-  return updatedTags;
-}
-
-/**
- * Remove tags from a course
- * @param {string} courseName - Name of the course
- * @param {string[]} tags - Array of tag strings to remove
- * @returns {string[]} Updated array of tags for the course
- */
-export function removeTags(courseName, tags) {
-  if (typeof window === 'undefined') return [];
-
-  const courseTags = getCourseTags();
-  const normalizedTags = tags.map(tag => tag.trim().toLowerCase());
-
-  if (!courseTags[courseName]) {
-    return [];
-  }
-
-  // Filter out removed tags
-  const updatedTags = courseTags[courseName].filter(
-    tag => !normalizedTags.includes(tag)
-  );
-
-  if (updatedTags.length === 0) {
-    // Remove course entry if no tags left
-    delete courseTags[courseName];
-  } else {
-    courseTags[courseName] = updatedTags;
-  }
-
-  localStorage.setItem('courseTags', JSON.stringify(courseTags));
-
-  // Dispatch event
-  window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
-    detail: { courseName, tags: updatedTags }
-  }));
-
-  return updatedTags;
-}
-
-/**
- * Get all tags for a specific course
- * @param {string} courseName - Name of the course
- * @returns {string[]} Array of tags for the course
- */
-export function getTagsForCourse(courseName) {
-  if (typeof window === 'undefined') return [];
-
-  const courseTags = getCourseTags();
-  return courseTags[courseName] || [];
-}
-
-/**
- * Get all course tags from localStorage
- * @returns {Object} Object mapping course names to tag arrays
- */
-export function getCourseTags() {
-  if (typeof window === 'undefined') return {};
-
-  try {
-    const stored = localStorage.getItem('courseTags');
-    return stored ? JSON.parse(stored) : {};
-  } catch (error) {
-    console.error('Error parsing course tags:', error);
-    return {};
-  }
-}
-
-/**
- * Get all unique tags across all courses
- * @returns {string[]} Sorted array of all unique tags
- */
-export function getAllTags() {
-  if (typeof window === 'undefined') return [];
-
-  const courseTags = getCourseTags();
-  const allTags = new Set();
-
-  Object.values(courseTags).forEach(tags => {
-    tags.forEach(tag => allTags.add(tag));
-  });
-
-  return Array.from(allTags).sort();
-}
-
-/**
- * Get all courses that have a specific tag
- * @param {string} tag - Tag to search for
- * @returns {string[]} Array of course names with the tag
- */
-export function getCoursesByTag(tag) {
-  if (typeof window === 'undefined') return [];
-
-  const courseTags = getCourseTags();
-  const normalizedTag = tag.trim().toLowerCase();
-  const matchingCourses = [];
-
-  Object.entries(courseTags).forEach(([courseName, tags]) => {
-    if (tags.includes(normalizedTag)) {
-      matchingCourses.push(courseName);
+    if (!allTags[courseName]) {
+        allTags[courseName] = [];
     }
-  });
 
-  return matchingCourses;
-}
+    if (!allTags[courseName].includes(normalizedTag)) {
+        allTags[courseName].push(normalizedTag);
+        localStorage.setItem('courseTags', JSON.stringify(allTags));
+        window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
+            detail: { courseName, tags: allTags[courseName], allTags: allTags }
+        }));
+    }
+};
 
-/**
- * Clear all tags for a specific course
- * @param {string} courseName - Name of the course
- */
-export function clearCourseTags(courseName) {
-  if (typeof window === 'undefined') return;
+export const removeTag = (course, tag) => {
+    if (typeof window === 'undefined' || !tag || tag.trim() === '') return;
 
-  const courseTags = getCourseTags();
-  delete courseTags[courseName];
+    const courseName = course.name;
+    const normalizedTag = tag.toLowerCase().trim();
+    const allTags = getAllTags();
 
-  localStorage.setItem('courseTags', JSON.stringify(courseTags));
+    if (allTags[courseName]) {
+        const initialLength = allTags[courseName].length;
+        allTags[courseName] = allTags[courseName].filter(t => t !== normalizedTag);
 
-  // Dispatch event
-  window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
-    detail: { courseName, tags: [] }
-  }));
-}
+        if (allTags[courseName].length === 0) {
+            delete allTags[courseName];
+        }
 
-/**
- * Clear all tags from all courses
- */
-export function clearAllTags() {
-  if (typeof window === 'undefined') return;
+        if (initialLength !== (allTags[courseName] ? allTags[courseName].length : 0)) {
+            localStorage.setItem('courseTags', JSON.stringify(allTags));
+            window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
+                detail: { courseName, tags: allTags[courseName] || [], allTags: allTags }
+            }));
+        }
+    }
+};
 
-  localStorage.removeItem('courseTags');
+export const getTags = (courseName) => {
+    if (typeof window === 'undefined') return [];
+    const allTags = getAllTags();
+    return allTags[courseName] || [];
+};
 
-  // Dispatch event
-  window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
-    detail: { courseName: null, tags: [] }
-  }));
-}
+export const getAllTags = () => {
+    if (typeof window === 'undefined') return {};
+    try {
+        const stored = localStorage.getItem('courseTags');
+        return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+        console.error('Error parsing course tags:', error);
+        return {};
+    }
+};
+
+export const getUniqueTags = () => {
+    const allTags = getAllTags();
+    const uniqueTags = new Set();
+    for (const courseName in allTags) {
+        allTags[courseName].forEach(tag => uniqueTags.add(tag));
+    }
+    return Array.from(uniqueTags).sort();
+};
+
+export const getCoursesByTag = (tag) => {
+    if (typeof window === 'undefined' || !tag || tag.trim() === '') return [];
+    const normalizedTag = tag.toLowerCase().trim();
+    const allTags = getAllTags();
+    const coursesWithTag = [];
+    for (const courseName in allTags) {
+        if (allTags[courseName].includes(normalizedTag)) {
+            coursesWithTag.push(courseName);
+        }
+    }
+    return coursesWithTag;
+};
+
+export const clearCourseTags = (courseName) => {
+    if (typeof window === 'undefined' || !courseName) return;
+    const allTags = getAllTags();
+    if (allTags[courseName]) {
+        delete allTags[courseName];
+        localStorage.setItem('courseTags', JSON.stringify(allTags));
+        window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
+            detail: { courseName, tags: [], allTags: allTags }
+        }));
+    }
+};
+
+export const clearAllTags = () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('courseTags');
+    window.dispatchEvent(new CustomEvent('courseTagsUpdated', {
+        detail: { allTags: {} }
+    }));
+};

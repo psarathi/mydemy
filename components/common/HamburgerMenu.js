@@ -1,24 +1,24 @@
 import {useState, useEffect} from 'react';
 import {useSession} from 'next-auth/react';
 import AuthButton from './AuthButton';
-import TagButton from './TagButton';
-import { getAllTags, clearAllTags } from '../../utils/tagging';
+import TagList from './TagList';
+import { getUniqueTags } from '../../utils/tagging';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const [viewHistory, setViewHistory] = useState([]);
     const [favorites, setFavorites] = useState([]);
-    const [allTags, setAllTags] = useState([]);
+    const [uniqueTags, setUniqueTags] = useState([]);
     const {data: session} = useSession();
 
     useEffect(() => {
         // Load data from localStorage
         const history = JSON.parse(localStorage.getItem('courseHistory') || '[]');
         const favs = JSON.parse(localStorage.getItem('courseFavorites') || '[]');
-        const tags = getAllTags();
+        const tags = getUniqueTags();
         setViewHistory(history);
         setFavorites(favs);
-        setAllTags(tags);
+        setUniqueTags(tags);
 
         // Listen for updates
         const handleHistoryUpdate = (event) => {
@@ -30,7 +30,7 @@ export default function HamburgerMenu() {
         };
 
         const handleTagsUpdate = () => {
-            setAllTags(getAllTags());
+            setUniqueTags(getUniqueTags());
         };
 
         window.addEventListener('courseHistoryUpdated', handleHistoryUpdate);
@@ -59,19 +59,10 @@ export default function HamburgerMenu() {
     };
 
     const handleTagClick = (tag) => {
-        // Store the selected tag for the Landing page to pick up
-        localStorage.setItem('selectedTag', tag);
         // Dispatch event to notify Landing page
-        window.dispatchEvent(new CustomEvent('tagSelected', { detail: { tag } }));
+        window.dispatchEvent(new CustomEvent('tagClicked', { detail: { tag } }));
         // Close the menu
         setIsOpen(false);
-    };
-
-    const handleClearAllTags = () => {
-        if (confirm('Are you sure you want to clear all tags?')) {
-            clearAllTags();
-            setAllTags([]);
-        }
     };
 
     return (
@@ -164,41 +155,13 @@ export default function HamburgerMenu() {
                             <h4>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                    <line x1="7" y1="7" x2="7" y2="7"></line>
                                 </svg>
-                                Tags ({allTags.length})
+                                Tags ({uniqueTags.length})
                             </h4>
-                            {allTags.length > 0 && (
-                                <button
-                                    className="clear-btn"
-                                    onClick={handleClearAllTags}
-                                    title="Clear all tags"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="3,6 5,6 21,6"></polyline>
-                                        <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2,2h4a2,2 0 0,1,2,2v2"></path>
-                                    </svg>
-                                </button>
-                            )}
                         </div>
                         <div className="menu-list">
-                            {allTags.length === 0 ? (
-                                <div className="empty-state">
-                                    <p>No tags yet</p>
-                                    <span>Add tags to courses to see them here</span>
-                                </div>
-                            ) : (
-                                <div className="tags-container">
-                                    {allTags.map((tag) => (
-                                        <TagButton
-                                            key={tag}
-                                            tag={tag}
-                                            onClick={handleTagClick}
-                                            size="medium"
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            <TagList onTagClick={handleTagClick} />
                         </div>
                     </div>
 
