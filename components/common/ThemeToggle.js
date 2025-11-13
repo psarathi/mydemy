@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import styles from '../../styles/modules/ThemeToggle.module.css';
 
 function ThemeToggle() {
     const { theme, toggleTheme, isDark } = useTheme();
@@ -7,12 +8,12 @@ function ThemeToggle() {
     return (
         <button
             onClick={toggleTheme}
-            className="theme-toggle"
+            className={styles.toggle}
             aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
         >
-            <div className="theme-toggle-track">
-                <div className="theme-toggle-thumb">
+            <div className={styles.track}>
+                <div className={styles.thumb}>
                     {isDark ? (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="12" cy="12" r="5"/>
@@ -25,7 +26,7 @@ function ThemeToggle() {
                     )}
                 </div>
             </div>
-            <span className="theme-toggle-label">
+            <span className={styles.label}>
                 {isDark ? 'Light' : 'Dark'}
             </span>
         </button>

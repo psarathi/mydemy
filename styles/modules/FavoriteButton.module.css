@@ -1,0 +1,27 @@
+/* FavoriteButton Component Styles */
+
+.btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn:hover {
+    background: var(--surface-hover);
+    color: var(--warning);
+}
+
+.btn.active {
+    color: var(--warning);
+}
+
+.btn.active:hover {
+    color: #f59e0b;
+}

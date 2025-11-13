@@ -1,5 +1,6 @@
 import {useState, useEffect} from 'react';
 import {toggleFavorite, isFavorite} from '../../utils/courseTracking';
+import styles from '../../styles/modules/FavoriteButton.module.css';
 
 export default function FavoriteButton({course, className = ''}) {
     const [isCourseFavorite, setIsCourseFavorite] = useState(false);
@@ -27,7 +28,7 @@ export default function FavoriteButton({course, className = ''}) {
 
     return (
         <button
-            className={`favorite-btn ${isCourseFavorite ? 'active' : ''} ${className}`}
+            className={`${styles.btn} ${isCourseFavorite ? styles.active : ''} ${className}`}
             onClick={handleToggleFavorite}
             aria-label={isCourseFavorite ? 'Remove from favorites' : 'Add to favorites'}
             title={isCourseFavorite ? 'Remove from favorites' : 'Add to favorites'}

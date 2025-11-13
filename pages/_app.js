@@ -1,4 +1,7 @@
 import "../styles/globals.css";
+import "../styles/utilities/layout.css";
+import "../styles/utilities/colors.css";
+import "../styles/utilities/typography.css";
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { SessionProvider } from 'next-auth/react';
 

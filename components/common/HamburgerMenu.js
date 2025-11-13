@@ -1,6 +1,8 @@
 import {useState, useEffect} from 'react';
 import {useSession} from 'next-auth/react';
 import AuthButton from './AuthButton';
+import FavoriteButton from './FavoriteButton';
+import styles from '../../styles/modules/HamburgerMenu.module.css';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -33,15 +35,6 @@ export default function HamburgerMenu() {
         };
     }, []);
 
-    const handleToggleFavorite = (course) => {
-        const newFavorites = favorites.some(fav => fav.name === course.name)
-            ? favorites.filter(fav => fav.name !== course.name)
-            : [...favorites, course];
-
-        setFavorites(newFavorites);
-        localStorage.setItem('courseFavorites', JSON.stringify(newFavorites));
-    };
-
     const clearHistory = () => {
         setViewHistory([]);
         localStorage.removeItem('courseHistory');
@@ -51,28 +44,28 @@ export default function HamburgerMenu() {
         <>
             {/* Hamburger Button */}
             <button
-                className={`hamburger-btn ${isOpen ? 'open' : ''}`}
+                className={`${styles.btn} ${isOpen ? styles.open : ''}`}
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Toggle menu"
             >
-                <span className="hamburger-line"></span>
-                <span className="hamburger-line"></span>
-                <span className="hamburger-line"></span>
+                <span className={styles.line}></span>
+                <span className={styles.line}></span>
+                <span className={styles.line}></span>
             </button>
 
             {/* Overlay */}
             {isOpen && (
-                <div 
-                    className="hamburger-overlay" 
+                <div
+                    className={styles.overlay}
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             {/* Sidebar Menu */}
-            <div className={`hamburger-sidebar ${isOpen ? 'open' : ''}`}>
-                <div className="hamburger-header">
-                    <button 
-                        className="hamburger-close"
+            <div className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
+                <div className={styles.header}>
+                    <button
+                        className={styles.close}
                         onClick={() => setIsOpen(false)}
                         aria-label="Close menu"
                     >
@@ -83,17 +76,17 @@ export default function HamburgerMenu() {
                     </button>
                 </div>
 
-                <div className="hamburger-content">
+                <div className={styles.content}>
                     {/* User Section */}
-                    <div className="menu-section">
-                        <div className="auth-section">
+                    <div className={styles.menuSection}>
+                        <div className={styles.authSection}>
                             <AuthButton />
                         </div>
                     </div>
 
                     {/* Favorites Section */}
-                    <div className="menu-section">
-                        <div className="section-header">
+                    <div className={styles.menuSection}>
+                        <div className={styles.sectionHeader}>
                             <h4>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -101,30 +94,22 @@ export default function HamburgerMenu() {
                                 Favorites ({favorites.length})
                             </h4>
                         </div>
-                        <div className="menu-list">
+                        <div className={styles.menuList}>
                             {favorites.length === 0 ? (
-                                <div className="empty-state">
+                                <div className={styles.emptyState}>
                                     <p>No favorites yet</p>
                                     <span>Mark courses as favorites to see them here</span>
                                 </div>
                             ) : (
                                 favorites.map((course, i) => (
-                                    <div key={i} className="menu-item">
-                                        <a href={`/${course.name}`} className="menu-link">
-                                            <div className="menu-item-content">
+                                    <div key={i} className={styles.menuItem}>
+                                        <a href={`/${course.name}`} className={styles.menuLink}>
+                                            <div className={styles.menuItemContent}>
                                                 <h5>{course.name}</h5>
                                                 <span>{course.topics?.length || 0} topics</span>
                                             </div>
                                         </a>
-                                        <button
-                                            className="favorite-btn active"
-                                            onClick={() => handleToggleFavorite(course)}
-                                            aria-label="Remove from favorites"
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
-                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                            </svg>
-                                        </button>
+                                        <FavoriteButton course={course} />
                                     </div>
                                 ))
                             )}
@@ -132,8 +117,8 @@ export default function HamburgerMenu() {
                     </div>
 
                     {/* Recent History Section */}
-                    <div className="menu-section">
-                        <div className="section-header">
+                    <div className={styles.menuSection}>
+                        <div className={styles.sectionHeader}>
                             <h4>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -143,7 +128,7 @@ export default function HamburgerMenu() {
                             </h4>
                             {viewHistory.length > 0 && (
                                 <button
-                                    className="clear-btn"
+                                    className={styles.clearBtn}
                                     onClick={clearHistory}
                                     title="Clear history"
                                 >
@@ -154,17 +139,17 @@ export default function HamburgerMenu() {
                                 </button>
                             )}
                         </div>
-                        <div className="menu-list">
+                        <div className={styles.menuList}>
                             {viewHistory.length === 0 ? (
-                                <div className="empty-state">
+                                <div className={styles.emptyState}>
                                     <p>No recent courses</p>
                                     <span>Courses you view will appear here</span>
                                 </div>
                             ) : (
                                 viewHistory.slice(0, 10).map((course, i) => (
-                                    <div key={i} className="menu-item">
-                                        <a href={`/${course.name}`} className="menu-link">
-                                            <div className="menu-item-content">
+                                    <div key={i} className={styles.menuItem}>
+                                        <a href={`/${course.name}`} className={styles.menuLink}>
+                                            <div className={styles.menuItemContent}>
                                                 <h5>{course.name}</h5>
                                                 <span>Viewed {new Date(course.viewedAt).toLocaleDateString()}</span>
                                             </div>

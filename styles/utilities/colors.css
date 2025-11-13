@@ -1,0 +1,31 @@
+/* Color Utilities */
+
+/* Text Colors */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-white { color: white; }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+/* Background Colors */
+.bg-transparent { background: transparent; }
+.bg-background { background: var(--background); }
+.bg-surface { background: var(--surface); }
+.bg-surface-alt { background: var(--surface-alt); }
+.bg-surface-hover { background: var(--surface-hover); }
+.bg-primary { background: var(--primary-color); }
+.bg-accent { background: var(--accent-color); }
+.bg-success { background: var(--success); }
+.bg-warning { background: var(--warning); }
+.bg-error { background: var(--error); }
+.bg-info { background: var(--info); }
+
+/* Border Colors */
+.border-transparent { border-color: transparent; }
+.border-default { border-color: var(--border); }
+.border-light { border-color: var(--border-light); }
+.border-primary { border-color: var(--primary-color); }
+.border-accent { border-color: var(--accent-color); }
