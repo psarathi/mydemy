@@ -323,32 +323,32 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                             className='course-card'
                             onMouseEnter={(event) => showCourseDetails(event, course)}
                         >
-                            <Link href={`/${course.name}`} className='course-link' onClick={() => handleCourseClick(course)}>
-                                <div className='course-card-content'>
+                            <div className='course-card-content'>
+                                <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
                                     <h3 className='course-title'>{course.name}</h3>
-                                    <div className='course-stats'>
-                                        <span className='stat'>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                            </svg>
-                                            {course.topics?.length || 0} topics
-                                        </span>
-                                        <span className='stat'>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                            </svg>
-                                            {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
-                                        </span>
-                                    </div>
-                                    <div className='course-tags'>
-                                        {getTags(course.name).map(tag => (
-                                            <TagButton key={tag} course={course} tag={tag} />
-                                        ))}
-                                    </div>
+                                </Link>
+                                <div className='course-stats'>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                        </svg>
+                                        {course.topics?.length || 0} topics
+                                    </span>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                        {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
+                                    </span>
                                 </div>
-                            </Link>
+                                <div className='course-tags'>
+                                    {getTags(course.name).map(tag => (
+                                        <TagButton key={tag} course={course} tag={tag} />
+                                    ))}
+                                </div>
+                            </div>
                             <div className='course-card-actions'>
                                 <FavoriteButton course={course} />
                                 <input
