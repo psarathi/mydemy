@@ -1,8 +1,10 @@
 import {useState, useEffect} from 'react';
 import {useSession} from 'next-auth/react';
+import Link from 'next/link';
 import AuthButton from './AuthButton';
 import TagList from './TagList';
 import { getUniqueTags } from '../../utils/tagging';
+import { addToHistory } from '../../utils/courseTracking';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +64,12 @@ export default function HamburgerMenu() {
         // Dispatch event to notify Landing page
         window.dispatchEvent(new CustomEvent('tagClicked', { detail: { tag } }));
         // Close the menu
+        setIsOpen(false);
+    };
+
+    const handleCourseClick = (course) => {
+        addToHistory(course, session);
+        // Close the menu when clicking on a course
         setIsOpen(false);
     };
 
@@ -128,12 +136,12 @@ export default function HamburgerMenu() {
                             ) : (
                                 favorites.map((course, i) => (
                                     <div key={i} className="menu-item">
-                                        <a href={`/${course.name}`} className="menu-link">
+                                        <Link href={`/${course.name}`} className="menu-link" onClick={() => handleCourseClick(course)}>
                                             <div className="menu-item-content">
                                                 <h5>{course.name}</h5>
                                                 <span>{course.topics?.length || 0} topics</span>
                                             </div>
-                                        </a>
+                                        </Link>
                                         <button
                                             className="favorite-btn active"
                                             onClick={() => handleToggleFavorite(course)}
@@ -197,12 +205,12 @@ export default function HamburgerMenu() {
                             ) : (
                                 viewHistory.slice(0, 10).map((course, i) => (
                                     <div key={i} className="menu-item">
-                                        <a href={`/${course.name}`} className="menu-link">
+                                        <Link href={`/${course.name}`} className="menu-link" onClick={() => handleCourseClick(course)}>
                                             <div className="menu-item-content">
                                                 <h5>{course.name}</h5>
                                                 <span>Viewed {new Date(course.viewedAt).toLocaleDateString()}</span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
                                 ))
                             )}
