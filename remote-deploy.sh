@@ -16,6 +16,7 @@ NC='\033[0m' # No Color
 DEPLOY_SCRIPT="./deploy.sh"
 SSH_PORT=22
 RUN_TESTS=false
+SKIP_CONFIRMATION=false
 
 # SSH ControlMaster settings for persistent connection (ask password only once)
 SSH_CONTROL_PATH="/tmp/ssh-control-%r@%h:%p"
@@ -77,6 +78,7 @@ usage() {
     echo "  -s, --script SCRIPT      Deploy script name (default: ./deploy.sh, can be set via DEPLOY_SCRIPT_NAME in .env)"
     echo "  -k, --key KEY_FILE       SSH private key file (can be set via DEPLOY_SSH_KEY in .env)"
     echo "  -t, --test               Run unit tests before deployment"
+    echo "  -y, --yes                Skip confirmation prompt (auto-approve deployment)"
     echo "  --help                   Display this help message"
     echo ""
     echo "Environment Configuration:"
@@ -123,6 +125,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--test)
             RUN_TESTS=true
+            shift
+            ;;
+        -y|--yes)
+            SKIP_CONFIRMATION=true
             shift
             ;;
         --help)
@@ -186,13 +192,18 @@ echo -e "  Run Tests:  ${GREEN}${RUN_TESTS}${NC}"
 echo ""
 
 # Confirm before proceeding
-read -p "$(echo -e ${YELLOW}Do you want to proceed with deployment? [y/N]:${NC} )" -n 1 -r
-echo ""
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${RED}Deployment cancelled${NC}"
-    exit 0
+if [ "$SKIP_CONFIRMATION" = false ]; then
+    read -p "$(echo -e ${YELLOW}Do you want to proceed with deployment? [y/N]:${NC} )" -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Deployment cancelled${NC}"
+        exit 0
+    fi
+    echo ""
+else
+    echo -e "${GREEN}Auto-approving deployment (--yes flag provided)${NC}"
+    echo ""
 fi
-echo ""
 
 # Test SSH connection
 echo -e "${BLUE}🔌 Testing SSH connection...${NC}"
