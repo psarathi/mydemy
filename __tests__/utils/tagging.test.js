@@ -1,4 +1,4 @@
-import { addTag, removeTag, getTags, getAllTags, getUniqueTags, getCoursesByTag, clearCourseTags, clearAllTags } from '../../utils/tagging';
+import { addTag, removeTag, getTags, getAllTags, getUniqueTags, getCoursesByTag, clearCourseTags, clearAllTags } from '@/lib/tags/tagging';
 
 describe('Tagging Utility Functions', () => {
     beforeEach(() => {

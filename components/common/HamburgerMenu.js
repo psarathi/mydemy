@@ -3,8 +3,8 @@ import {useSession} from 'next-auth/react';
 import Link from 'next/link';
 import AuthButton from './AuthButton';
 import TagList from './TagList';
-import { getUniqueTags } from '../../utils/tagging';
-import { addToHistory } from '../../utils/courseTracking';
+import { getUniqueTags } from '@/lib/tags/tagging';
+import { addToHistory } from '@/lib/tracking/courseTracking';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);

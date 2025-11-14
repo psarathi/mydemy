@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
-const listDirectoriesWithTopics = require('../../utilities/fetchCourseListingsV2');
+const listDirectoriesWithTopics = require('@/lib/courses/fetchCourseListings');
 
 // Mock dependencies
 jest.mock('fs', () => ({
@@ -9,13 +9,13 @@ jest.mock('fs', () => ({
     }
 }));
 jest.mock('path');
-jest.mock('../../utilities/topicNameSorter');
-jest.mock('../../utilities/topicFileNameSorter');
+jest.mock('@/lib/courses/topicNameSorter');
+jest.mock('@/lib/courses/topicFileNameSorter');
 
 const mockFs = fs;
 const mockPath = path;
-const mockTopicNameSorter = require('../../utilities/topicNameSorter');
-const mockTopicFileNameSorter = require('../../utilities/topicFileNameSorter');
+const mockTopicNameSorter = require('@/lib/courses/topicNameSorter');
+const mockTopicFileNameSorter = require('@/lib/courses/topicFileNameSorter');
 
 describe('listDirectoriesWithTopics', () => {
     let consoleLogSpy;

@@ -1,4 +1,4 @@
-import kafkaEmitter from '../../kafkaHandler';
+import kafkaEmitter from '@/lib/kafka/kafkaHandler';
 
 export default function handler(req, res) {
     if (req.method === 'GET') {

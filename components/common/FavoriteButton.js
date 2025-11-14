@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {toggleFavorite, isFavorite} from '../../utils/courseTracking';
+import {toggleFavorite, isFavorite} from '@/lib/tracking/courseTracking';
 
 export default function FavoriteButton({course, className = ''}) {
     const [isCourseFavorite, setIsCourseFavorite] = useState(false);

@@ -2,8 +2,8 @@ import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '../constants';
-import {addToHistory} from '../utils/courseTracking';
+import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '@/lib/constants';
+import {addToHistory} from '@/lib/tracking/courseTracking';
 import {useSession} from 'next-auth/react';
 import {useCourses} from '../hooks/useCourses';
 

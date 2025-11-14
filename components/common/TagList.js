@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUniqueTags } from '../../utils/tagging';
+import { getUniqueTags } from '@/lib/tags/tagging';
 
 export default function TagList({ onTagClick }) {
     const [uniqueTags, setUniqueTags] = useState([]);

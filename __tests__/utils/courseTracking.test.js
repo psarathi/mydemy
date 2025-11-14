@@ -8,7 +8,7 @@ import {
     toggleFavorite,
     getFavorites,
     isFavorite
-} from '../../utils/courseTracking';
+} from '@/lib/tracking/courseTracking';
 
 // Mock localStorage
 const localStorageMock = {

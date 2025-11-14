@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import TagButton from '../../../components/common/TagButton';
 
 // Mock tagging utilities
-jest.mock('../../../utils/tagging');
+jest.mock('@/lib/tags/tagging');
 
-const mockRemoveTag = require('../../../utils/tagging').removeTag;
-const mockGetTags = require('../../../utils/tagging').getTags;
+const mockRemoveTag = require('@/lib/tags/tagging').removeTag;
+const mockGetTags = require('@/lib/tags/tagging').getTags;
 
 describe('TagButton', () => {
     const mockCourse = {

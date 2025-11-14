@@ -46,7 +46,7 @@ jest.mock('../../../components/common/FavoriteButton', () => {
     };
 });
 
-jest.mock('../../../utils/courseTracking', () => ({
+jest.mock('@/lib/tracking/courseTracking', () => ({
     addToHistory: jest.fn()
 }));
 

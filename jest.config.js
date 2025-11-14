@@ -12,13 +12,19 @@ const customJestConfig = {
     '<rootDir>/**/*.(test|spec).{js,jsx,ts,tsx}'
   ],
   moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',
-    '^@/utilities/(.*)$': '<rootDir>/utilities/$1',
+    '^@/lib/(.*)$': '<rootDir>/lib/$1',
+    '^@/hooks/(.*)$': '<rootDir>/hooks/$1',
+    '^@/contexts/(.*)$': '<rootDir>/contexts/$1',
+    '^@/styles/(.*)$': '<rootDir>/styles/$1',
+    '^@/pages/(.*)$': '<rootDir>/pages/$1',
   },
   collectCoverageFrom: [
     'components/**/*.{js,jsx}',
-    'utilities/**/*.{js,jsx}',
-    'utils/**/*.{js,jsx}',
+    'lib/**/*.{js,jsx}',
+    'hooks/**/*.{js,jsx}',
+    'contexts/**/*.{js,jsx}',
     '!**/node_modules/**',
     '!**/*.config.js',
     '!components/layout/Landing.js',

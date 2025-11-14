@@ -6,10 +6,10 @@ import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
-import {addToHistory} from '../../utils/courseTracking';
-import {addTag, removeTag, getTags} from '../../utils/tagging';
+import {addToHistory} from '@/lib/tracking/courseTracking';
+import {addTag, removeTag, getTags} from '@/lib/tags/tagging';
 import {useSession} from 'next-auth/react';
-import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
+import {SUPPORTED_VIDEO_EXTENSIONS} from '@/lib/constants';
 import {useCourses} from '../../hooks/useCourses';
 
 function Landing({search_term = '', exact, refreshCoursesRef}) {

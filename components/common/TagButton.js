@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { removeTag, getTags } from '../../utils/tagging';
+import { removeTag, getTags } from '@/lib/tags/tagging';
 
 export default function TagButton({ course, tag, className = '' }) {
     const [isTagged, setIsTagged] = useState(false);

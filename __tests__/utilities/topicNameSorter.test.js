@@ -1,4 +1,4 @@
-const topicNameSorter = require('../../utilities/topicNameSorter');
+const topicNameSorter = require('@/lib/courses/topicNameSorter');
 
 describe('topicNameSorter', () => {
     test('sorts topics by name in ascending order', () => {

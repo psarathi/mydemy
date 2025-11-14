@@ -1,4 +1,4 @@
-const fetchCourseListings = require('../../utilities/fetchCourseListings');
+const fetchCourseListings = require('@/lib/courses/fetchCourseListings');
 
 describe('fetchCourseListings integration tests', () => {
     let consoleLogSpy;

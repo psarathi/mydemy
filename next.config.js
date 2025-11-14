@@ -1,3 +1,6 @@
+// Validate environment variables on startup
+require('./lib/env');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

@@ -7,11 +7,11 @@ import FavoriteButton from '../../../components/common/FavoriteButton';
 jest.mock('next-auth/react');
 
 // Mock courseTracking utilities
-jest.mock('../../../utils/courseTracking');
+jest.mock('@/lib/tracking/courseTracking');
 
 const mockUseSession = require('next-auth/react').useSession;
-const mockToggleFavorite = require('../../../utils/courseTracking').toggleFavorite;
-const mockIsFavorite = require('../../../utils/courseTracking').isFavorite;
+const mockToggleFavorite = require('@/lib/tracking/courseTracking').toggleFavorite;
+const mockIsFavorite = require('@/lib/tracking/courseTracking').isFavorite;
 
 describe('FavoriteButton', () => {
     const mockCourse = {
