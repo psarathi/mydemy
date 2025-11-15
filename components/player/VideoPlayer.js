@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '../../constants';
+import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '@/lib/constants';
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
