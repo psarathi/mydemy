@@ -1,5 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '../../constants';
+import AutoplayCountdown from './AutoplayCountdown';
+import VideoSettings from './VideoSettings';
 
 function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const vp = useRef(null);
@@ -7,19 +9,50 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
+    const [showCountdown, setShowCountdown] = useState(false);
+    const [nextVideoInfo, setNextVideoInfo] = useState(null);
+    const [countdownDuration, setCountdownDuration] = useState(10);
+    const [showSettings, setShowSettings] = useState(false);
 
     const endHandler = (userSelected = false) => {
-        let vf = videoFile,
-            sf = subtitlesFile;
-        if (!userSelected) {
+        if (userSelected) {
+            // User manually selected a video, play immediately
+            setCurrentVideo(videoFile);
+            setCurrentSubtitle(subtitlesFile);
+            vp.current.load();
+            vp.current.play();
+        } else {
+            // Video ended, show countdown before playing next
             const nextVideo = getNextVideo();
-            vf = nextVideo.name;
-            sf = nextVideo.subtitles;
+            setNextVideoInfo(nextVideo);
+            setShowCountdown(true);
         }
-        setCurrentVideo(vf);
-        setCurrentSubtitle(sf);
-        vp.current.load();
-        vp.current.play();
+    };
+
+    const playNextVideo = () => {
+        if (nextVideoInfo) {
+            setCurrentVideo(nextVideoInfo.name);
+            setCurrentSubtitle(nextVideoInfo.subtitles);
+            setShowCountdown(false);
+            setNextVideoInfo(null);
+            setTimeout(() => {
+                vp.current.load();
+                vp.current.play();
+            }, 100);
+        }
+    };
+
+    const cancelAutoplay = () => {
+        setShowCountdown(false);
+        setNextVideoInfo(null);
+    };
+
+    const getNextVideoName = () => {
+        if (!nextVideoInfo || !nextVideoInfo.name) {
+            return 'Next video';
+        }
+        const pathParts = nextVideoInfo.name.split('/');
+        return pathParts[pathParts.length - 1].replace(/\.[^.]+$/, '');
     };
 
     const addTrack = () => {
@@ -60,6 +93,27 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     });
 
     useEffect(() => {
+        // Load autoplay countdown duration from localStorage
+        const savedDuration = localStorage.getItem('autoplayCountdownDuration');
+        if (savedDuration) {
+            setCountdownDuration(parseInt(savedDuration, 10));
+        }
+
+        // Listen for settings updates
+        const handleSettingsUpdate = (event) => {
+            if (event.detail.countdownDuration) {
+                setCountdownDuration(event.detail.countdownDuration);
+            }
+        };
+
+        window.addEventListener('autoplaySettingsUpdated', handleSettingsUpdate);
+
+        return () => {
+            window.removeEventListener('autoplaySettingsUpdated', handleSettingsUpdate);
+        };
+    }, []);
+
+    useEffect(() => {
         setCurrentVideo(videoFile);
         setCurrentSubtitle(subtitlesFile);
         endHandler(true);
@@ -79,6 +133,18 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
 
     return (
         <div className='modern-video-container'>
+            {showCountdown && (
+                <AutoplayCountdown
+                    nextVideoName={getNextVideoName()}
+                    onCancel={cancelAutoplay}
+                    onPlayNow={playNextVideo}
+                    countdownDuration={countdownDuration}
+                />
+            )}
+            <VideoSettings
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+            />
             <div className='video-header'>
                 <div className='video-info'>
                     <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
@@ -108,7 +174,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                             </svg>
                         )}
                     </button>
-                    <button 
+                    <button
                         className='control-btn'
                         onClick={() => endHandler()}
                         aria-label="Next video"
@@ -116,6 +182,17 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polygon points="5 4 15 12 5 20 5 4"></polygon>
                             <line x1="19" y1="5" x2="19" y2="19"></line>
+                        </svg>
+                    </button>
+                    <button
+                        className='control-btn'
+                        onClick={() => setShowSettings(true)}
+                        aria-label="Video settings"
+                        title="Video settings"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l-4.24 4.24m13.66-5.66l-6-0.01m-6 0l-6-0.01m13.66 5.66l-4.24-4.24m0-6l-4.24-4.24"></path>
                         </svg>
                     </button>
                     {videoDuration && (
