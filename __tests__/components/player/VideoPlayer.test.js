@@ -53,6 +53,12 @@ describe('VideoPlayer', () => {
         window.HTMLMediaElement.prototype.load = jest.fn();
         window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve());
         window.HTMLMediaElement.prototype.pause = jest.fn();
+
+        // Mock textTracks
+        Object.defineProperty(window.HTMLMediaElement.prototype, 'textTracks', {
+            get: () => [{mode: 'disabled'}],
+            configurable: true
+        });
     });
 
     afterEach(() => {

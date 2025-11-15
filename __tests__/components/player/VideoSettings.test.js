@@ -109,20 +109,17 @@ describe('VideoSettings', () => {
         render(<VideoSettings isOpen={true} onClose={mockOnClose} />);
 
         const slider = screen.getByRole('slider');
-        await user.clear(slider);
-        await user.type(slider, '30');
+        fireEvent.change(slider, { target: { value: '30' } });
 
         const numberInput = screen.getByRole('spinbutton');
         expect(numberInput).toHaveValue(30);
     });
 
     test('updates value when number input is changed', async () => {
-        const user = userEvent.setup();
         render(<VideoSettings isOpen={true} onClose={mockOnClose} />);
 
         const numberInput = screen.getByRole('spinbutton');
-        await user.clear(numberInput);
-        await user.type(numberInput, '45');
+        fireEvent.change(numberInput, { target: { value: '45' } });
 
         expect(numberInput).toHaveValue(45);
     });
@@ -206,12 +203,10 @@ describe('VideoSettings', () => {
     });
 
     test('accepts valid values within range', async () => {
-        const user = userEvent.setup();
         render(<VideoSettings isOpen={true} onClose={mockOnClose} />);
 
         const numberInput = screen.getByRole('spinbutton');
-        await user.clear(numberInput);
-        await user.type(numberInput, '15');
+        fireEvent.change(numberInput, { target: { value: '15' } });
 
         expect(numberInput).toHaveValue(15);
     });

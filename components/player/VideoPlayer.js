@@ -19,8 +19,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
             // User manually selected a video, play immediately
             setCurrentVideo(videoFile);
             setCurrentSubtitle(subtitlesFile);
-            vp.current.load();
-            vp.current.play();
+            if (vp.current) {
+                vp.current.load();
+                vp.current.play();
+            }
         } else {
             // Video ended, show countdown before playing next
             const nextVideo = getNextVideo();
@@ -36,8 +38,10 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
             setShowCountdown(false);
             setNextVideoInfo(null);
             setTimeout(() => {
-                vp.current.load();
-                vp.current.play();
+                if (vp.current) {
+                    vp.current.load();
+                    vp.current.play();
+                }
             }, 100);
         }
     };
@@ -59,6 +63,9 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     };
 
     const addTrack = () => {
+        if (!vp.current || !currentSubtitle) {
+            return;
+        }
         // getVideoDuration();
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
@@ -71,11 +78,15 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         track.src = `${BASE_CDN_PATH}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
-            vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
+            if (vp.current && vp.current.textTracks && vp.current.textTracks[0]) {
+                vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
+            }
         });
         track.default = true;
         vp.current.appendChild(track);
-        vp.current.textTracks[0].mode = 'showing';
+        if (vp.current.textTracks && vp.current.textTracks[0]) {
+            vp.current.textTracks[0].mode = 'showing';
+        }
     };
 
     const getVideoName = () => {
