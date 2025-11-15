@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 export default function AutoplayCountdown({
-    nextVideoName,
+    nextVideoInfo,
     onCancel,
     onPlayNow,
     countdownDuration = 10
@@ -99,8 +99,11 @@ export default function AutoplayCountdown({
                         </div>
 
                         <div className="countdown-video-details">
-                            <p className="countdown-label">Next video</p>
-                            <h4 className="countdown-video-name">{nextVideoName}</h4>
+                            <p className="countdown-label">Up Next</p>
+                            {nextVideoInfo?.topic && (
+                                <p className="countdown-topic-name">{nextVideoInfo.topic}</p>
+                            )}
+                            <h4 className="countdown-video-name">{nextVideoInfo?.lesson || 'Next video'}</h4>
                         </div>
                     </div>
 

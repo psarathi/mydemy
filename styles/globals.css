@@ -3013,11 +3013,22 @@ input:focus + .slider {
 }
 
 .countdown-label {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.875rem;
+    margin: 0 0 0.25rem 0;
+    font-size: 0.75rem;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.countdown-topic-name {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--primary-color, #007bff);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .countdown-video-name {

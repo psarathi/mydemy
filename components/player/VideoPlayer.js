@@ -47,12 +47,15 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         setNextVideoInfo(null);
     };
 
-    const getNextVideoName = () => {
+    const getNextVideoInfo = () => {
         if (!nextVideoInfo || !nextVideoInfo.name) {
-            return 'Next video';
+            return { topic: '', lesson: 'Next video' };
         }
         const pathParts = nextVideoInfo.name.split('/');
-        return pathParts[pathParts.length - 1].replace(/\.[^.]+$/, '');
+        // Path format: courses/course-name/topic-name/lesson-name.ext
+        const lesson = pathParts[pathParts.length - 1].replace(/\.[^.]+$/, '');
+        const topic = pathParts.length >= 3 ? pathParts[pathParts.length - 2] : '';
+        return { topic, lesson };
     };
 
     const addTrack = () => {
@@ -135,7 +138,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         <div className='modern-video-container'>
             {showCountdown && (
                 <AutoplayCountdown
-                    nextVideoName={getNextVideoName()}
+                    nextVideoInfo={getNextVideoInfo()}
                     onCancel={cancelAutoplay}
                     onPlayNow={playNextVideo}
                     countdownDuration={countdownDuration}
