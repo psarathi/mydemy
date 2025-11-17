@@ -131,95 +131,18 @@
     }
 }
 
-.hamburger-btn:hover {
-    background: var(--surface-hover);
-    box-shadow: var(--shadow-md);
-}
 
-.hamburger-line {
-    width: 18px;
-    height: 2px;
-    background: var(--text-primary);
-    border-radius: 1px;
-    transition: all 0.3s ease;
-}
 
-.hamburger-btn.open .hamburger-line:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-}
 
-.hamburger-btn.open .hamburger-line:nth-child(2) {
-    opacity: 0;
-}
 
-.hamburger-btn.open .hamburger-line:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -6px);
-}
 
-.hamburger-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    opacity: 0;
-    animation: fadeIn 0.3s ease forwards;
-}
 
-.hamburger-sidebar {
-    position: fixed;
-    top: 0;
-    left: -320px;
-    width: 320px;
-    height: 100vh;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    z-index: 1000;
-    transition: left 0.3s ease;
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-}
 
-.hamburger-sidebar.open {
-    left: 0;
-}
 
-.hamburger-header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-alt);
-}
 
-.hamburger-header h3 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 18px;
-    font-weight: 600;
-}
 
-.hamburger-close {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
 
-.hamburger-close:hover {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-}
 
-.hamburger-content {
-    padding: 0;
-}
 
 .menu-section {
     border-bottom: 1px solid var(--border-light);
@@ -370,10 +293,6 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .hamburger-sidebar {
-        width: 100vw;
-        left: -100vw;
-    }
     
     .modern-landing-container {
         padding-left: 0;
@@ -2618,13 +2537,6 @@ input:focus + .slider {
     border-top: 1px solid var(--border-light);
 }
 
-/* Tags Container in Hamburger Menu */
-.tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-}
 
 /* Dark Mode Adjustments */
 [data-theme="dark"] .tag-button {
