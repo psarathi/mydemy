@@ -303,11 +303,14 @@ function CourseName({courseName}) {
 export default CourseName;
 
 export async function getStaticProps({params: {courseName}}) {
+    const staticExport = process.env.TAURI_BUILD === 'true';
+
     return {
         props: {
             courseName,
         },
-        revalidate: 3600 * 24,
+        // ISR is not compatible with static export
+        ...(staticExport ? {} : {revalidate: 3600 * 24}),
     };
 }
 
