@@ -8,21 +8,34 @@ pub fn run() {
             {
                 use tauri_plugin_updater::UpdaterExt;
 
-                // Check for updates on startup
+                // Check for updates on startup (only if endpoints are configured)
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     match handle.updater() {
                         Ok(updater) => {
-                            if let Ok(Some(update)) = updater.check().await {
-                                println!("Update available: {}", update.version);
+                            match updater.check().await {
+                                Ok(Some(update)) => {
+                                    println!("Update available: {}", update.version);
 
-                                // Download and install the update
-                                if let Err(e) = update.download_and_install(|_, _| {}, || {}).await {
-                                    eprintln!("Failed to update: {}", e);
+                                    // Download and install the update
+                                    if let Err(e) = update.download_and_install(|_, _| {}, || {}).await {
+                                        eprintln!("Failed to update: {}", e);
+                                    }
+                                }
+                                Ok(None) => {
+                                    println!("App is up to date");
+                                }
+                                Err(e) => {
+                                    // Don't error out if updater isn't configured
+                                    println!("Update check skipped: {}", e);
                                 }
                             }
                         }
-                        Err(e) => eprintln!("Failed to get updater: {}", e),
+                        Err(e) => {
+                            // Only log a warning if updater endpoints aren't set up yet
+                            println!("Auto-updater not configured: {}", e);
+                            println!("To enable updates, configure endpoints in tauri.conf.json");
+                        }
                     }
                 });
             }
