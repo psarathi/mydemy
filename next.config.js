@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Enable static export for Tauri
+  output: 'export',
+
   // Compiler optimizations (Next.js 15 uses SWC by default)
   compiler: {
     // Remove console logs in production
@@ -10,10 +13,9 @@ const nextConfig = {
     } : false,
   },
 
-  // Image optimization
+  // Image optimization - disable for static export
   images: {
-    formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60,
+    unoptimized: true,
   },
 
   // Production optimizations
@@ -27,6 +29,9 @@ const nextConfig = {
 
   // Optimize fonts
   optimizeFonts: true,
+
+  // Trailing slash for static export
+  trailingSlash: true,
 };
 
 module.exports = nextConfig;
