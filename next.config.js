@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Enable static export for Tauri
-  output: 'export',
+  // Enable static export for Tauri builds only (not in dev mode)
+  ...(process.env.TAURI_BUILD === 'true' && { output: 'export' }),
 
   // Compiler optimizations (Next.js 15 uses SWC by default)
   compiler: {
@@ -26,9 +26,6 @@ const nextConfig = {
 
   // Enable compression
   compress: true,
-
-  // Optimize fonts
-  optimizeFonts: true,
 
   // Trailing slash for static export
   trailingSlash: true,

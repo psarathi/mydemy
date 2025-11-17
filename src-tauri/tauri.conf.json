@@ -5,7 +5,7 @@
   "identifier": "com.mydemy.app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "TAURI_BUILD=true npm run build",
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000"
   },
