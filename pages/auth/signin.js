@@ -2,21 +2,42 @@ import {getProviders, signIn, getSession} from 'next-auth/react'
 import {useRouter} from 'next/router'
 import {useEffect, useState} from 'react'
 
-export default function SignIn({providers}) {
+export default function SignIn() {
     const [session, setSession] = useState(null)
+    const [providers, setProviders] = useState(null)
     const router = useRouter()
 
     useEffect(() => {
+        // Fetch session
         getSession().then((session) => {
             if (session) {
                 router.push('/')
             }
             setSession(session)
         })
+
+        // Fetch providers on client-side for static export compatibility
+        getProviders().then((providers) => {
+            setProviders(providers)
+        })
     }, [router])
 
     if (session) {
         return null
+    }
+
+    // Show loading state while providers are being fetched
+    if (!providers) {
+        return (
+            <div className='signin-container'>
+                <div className='signin-card'>
+                    <div className='signin-header'>
+                        <h1>Welcome to MyDemy</h1>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -26,7 +47,7 @@ export default function SignIn({providers}) {
                     <h1>Welcome to MyDemy</h1>
                     <p>Sign in to access your courses and track your progress</p>
                 </div>
-                
+
                 <div className='signin-providers'>
                     {Object.values(providers).map((provider) => (
                         <button
@@ -71,11 +92,4 @@ export default function SignIn({providers}) {
             </div>
         </div>
     )
-}
-
-export async function getServerSideProps(context) {
-    const providers = await getProviders()
-    return {
-        props: {providers},
-    }
 }
