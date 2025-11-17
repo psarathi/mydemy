@@ -1,21 +1,28 @@
 import {useState, useEffect} from 'react';
 import {useSession} from 'next-auth/react';
+import Link from 'next/link';
 import AuthButton from './AuthButton';
 import FavoriteButton from './FavoriteButton';
+import TagList from './TagList';
+import { getUniqueTags } from '../../utils/tagging';
+import { addToHistory } from '../../utils/courseTracking';
 import styles from '../../styles/modules/HamburgerMenu.module.css';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const [viewHistory, setViewHistory] = useState([]);
     const [favorites, setFavorites] = useState([]);
+    const [uniqueTags, setUniqueTags] = useState([]);
     const {data: session} = useSession();
 
     useEffect(() => {
         // Load data from localStorage
         const history = JSON.parse(localStorage.getItem('courseHistory') || '[]');
         const favs = JSON.parse(localStorage.getItem('courseFavorites') || '[]');
+        const tags = getUniqueTags();
         setViewHistory(history);
         setFavorites(favs);
+        setUniqueTags(tags);
 
         // Listen for updates
         const handleHistoryUpdate = (event) => {
@@ -26,18 +33,37 @@ export default function HamburgerMenu() {
             setFavorites(event.detail.favorites);
         };
 
+        const handleTagsUpdate = () => {
+            setUniqueTags(getUniqueTags());
+        };
+
         window.addEventListener('courseHistoryUpdated', handleHistoryUpdate);
         window.addEventListener('courseFavoritesUpdated', handleFavoritesUpdate);
+        window.addEventListener('courseTagsUpdated', handleTagsUpdate);
 
         return () => {
             window.removeEventListener('courseHistoryUpdated', handleHistoryUpdate);
             window.removeEventListener('courseFavoritesUpdated', handleFavoritesUpdate);
+            window.removeEventListener('courseTagsUpdated', handleTagsUpdate);
         };
     }, []);
 
     const clearHistory = () => {
         setViewHistory([]);
         localStorage.removeItem('courseHistory');
+    };
+
+    const handleTagClick = (tag) => {
+        // Dispatch event to notify Landing page
+        window.dispatchEvent(new CustomEvent('tagClicked', { detail: { tag } }));
+        // Close the menu
+        setIsOpen(false);
+    };
+
+    const handleCourseClick = (course) => {
+        addToHistory(course, session);
+        // Close the menu when clicking on a course
+        setIsOpen(false);
     };
 
     return (
@@ -103,16 +129,32 @@ export default function HamburgerMenu() {
                             ) : (
                                 favorites.map((course, i) => (
                                     <div key={i} className={styles.menuItem}>
-                                        <a href={`/${course.name}`} className={styles.menuLink}>
+                                        <Link href={`/${course.name}`} className={styles.menuLink} onClick={() => handleCourseClick(course)}>
                                             <div className={styles.menuItemContent}>
                                                 <h5>{course.name}</h5>
                                                 <span>{course.topics?.length || 0} topics</span>
                                             </div>
-                                        </a>
+                                        </Link>
                                         <FavoriteButton course={course} />
                                     </div>
                                 ))
                             )}
+                        </div>
+                    </div>
+
+                    {/* Tags Section */}
+                    <div className={styles.menuSection}>
+                        <div className={styles.sectionHeader}>
+                            <h4>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                    <line x1="7" y1="7" x2="7" y2="7"></line>
+                                </svg>
+                                Tags ({uniqueTags.length})
+                            </h4>
+                        </div>
+                        <div className={styles.menuList}>
+                            <TagList onTagClick={handleTagClick} />
                         </div>
                     </div>
 
@@ -148,12 +190,12 @@ export default function HamburgerMenu() {
                             ) : (
                                 viewHistory.slice(0, 10).map((course, i) => (
                                     <div key={i} className={styles.menuItem}>
-                                        <a href={`/${course.name}`} className={styles.menuLink}>
+                                        <Link href={`/${course.name}`} className={styles.menuLink} onClick={() => handleCourseClick(course)}>
                                             <div className={styles.menuItemContent}>
                                                 <h5>{course.name}</h5>
                                                 <span>Viewed {new Date(course.viewedAt).toLocaleDateString()}</span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
                                 ))
                             )}

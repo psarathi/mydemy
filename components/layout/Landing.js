@@ -5,7 +5,9 @@ import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
+import TagButton from '../common/TagButton';
 import {addToHistory} from '../../utils/courseTracking';
+import {addTag, removeTag, getTags} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 import {useCourses} from '../../hooks/useCourses';
@@ -53,6 +55,13 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     useEffect(() => {
         if (!searchTerm) {
             setCourseList(courses);
+        } else if (searchTerm.startsWith('#')) {
+            const tag = searchTerm.substring(1);
+            const filterCourses = (c) => {
+                const courseTags = getTags(c.name);
+                return courseTags.includes(tag);
+            };
+            setCourseList(courses.filter(filterCourses));
         } else {
             let searchTermParts = searchTerm.trim().split(' ');
 
@@ -89,6 +98,16 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     }, [searchTerm, exactSearch, searchInLessons, courses]);
 
     useEffect(() => {
+        function handleTagClick(event) {
+            // Prepend '#' to trigger tag search
+            setSearchTerm(`#${event.detail.tag}`);
+        }
+
+        window.addEventListener('tagClicked', handleTagClick);
+        return () => window.removeEventListener('tagClicked', handleTagClick);
+    }, []);
+
+    useEffect(() => {
         function handleKeyDown(e) {
             if (e.metaKey && (e.key === 'K' || e.key === 'k')) {
                 searchField.current.focus();
@@ -118,6 +137,24 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const clearSearch = () => {
         setSearchTerm('');
         searchField.current?.focus();
+    };
+
+    const handleBulkAddTag = (tagValue) => {
+        if (!tagValue || tagValue.trim() === '') return;
+
+        // Add tag to all courses in the current filtered list
+        courseList.forEach(course => {
+            addTag(course, tagValue);
+        });
+    };
+
+    const handleBulkRemoveTag = (tagValue) => {
+        if (!tagValue || tagValue.trim() === '') return;
+
+        // Remove tag from all courses in the current filtered list
+        courseList.forEach(course => {
+            removeTag(course, tagValue);
+        });
     };
 
     if (isLoading) {
@@ -228,40 +265,103 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 </div>
                 
                 <div className='courses-header'>
-                    <h1>Courses</h1>
-                    <span className='course-count'>{courseList.length} available</span>
+                    <div>
+                        <h1>Courses</h1>
+                        <span className='course-count'>{courseList.length} available</span>
+                    </div>
+                    {courseList.length > 0 && (
+                        <div className='bulk-tag-container'>
+                            <div className='bulk-tag-section'>
+                                <input
+                                    type="text"
+                                    className="bulk-tag-input bulk-tag-add"
+                                    placeholder="Add tag to all..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            handleBulkAddTag(e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                <span className='bulk-tag-hint'>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Add to all
+                                </span>
+                            </div>
+                            <div className='bulk-tag-divider'></div>
+                            <div className='bulk-tag-section'>
+                                <input
+                                    type="text"
+                                    className="bulk-tag-input bulk-tag-remove"
+                                    placeholder="Remove tag from all..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            handleBulkRemoveTag(e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                <span className='bulk-tag-hint bulk-tag-hint-remove'>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Remove from all
+                                </span>
+                            </div>
+                            <span className='bulk-tag-count'>{courseList.length} {courseList.length === 1 ? 'course' : 'courses'}</span>
+                        </div>
+                    )}
                 </div>
                 
                 <div className='courses-grid'>
                     {courseList.map((course, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className='course-card'
                             onMouseEnter={(event) => showCourseDetails(event, course)}
                         >
-                            <Link href={`/${course.name}`} className='course-link' onClick={() => handleCourseClick(course)}>
-                                <div className='course-card-content'>
+                            <div className='course-card-content'>
+                                <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
                                     <h3 className='course-title'>{course.name}</h3>
-                                    <div className='course-stats'>
-                                        <span className='stat'>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                            </svg>
-                                            {course.topics?.length || 0} topics
-                                        </span>
-                                        <span className='stat'>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                            </svg>
-                                            {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
-                                        </span>
-                                    </div>
+                                </Link>
+                                <div className='course-stats'>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                        </svg>
+                                        {course.topics?.length || 0} topics
+                                    </span>
+                                    <span className='stat'>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                        {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
+                                    </span>
                                 </div>
-                            </Link>
+                                <div className='course-tags'>
+                                    {getTags(course.name).map(tag => (
+                                        <TagButton key={tag} course={course} tag={tag} />
+                                    ))}
+                                </div>
+                            </div>
                             <div className='course-card-actions'>
                                 <FavoriteButton course={course} />
+                                <input
+                                    type="text"
+                                    className="tag-input"
+                                    placeholder="Add tag"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            addTag(course, e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
                                 <button
                                     className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
                                     aria-label={`Preview ${course.name}`}
