@@ -127,15 +127,30 @@ COURSES_UPLOAD_METHOD=custom
 
 ### New Workflow (After)
 
+#### Just Adding Courses (No Code Changes)
+
 1. Add course videos to `COURSES_FOLDER`
 2. Run `npm run update:courses`
    - Generates fresh courses.json
-   - Uploads to CDN/server
+   - Uploads to CDN/server automatically
 3. Done! ✨
 
 ⏱️ **Time:** 2 minutes | **Effort:** Low | **User friction:** None
 
 Desktop apps automatically fetch the new courses on next launch or within 5 minutes.
+
+#### Building Desktop App (With Courses Upload)
+
+1. Make code/UI changes
+2. Run `npm run tauri:build`
+   - Generates courses.json
+   - Builds web app
+   - **Uploads courses.json to CDN** (automatic!)
+   - Builds desktop app
+
+⏱️ **Time:** ~10 minutes | **Includes:** Latest courses + app updates
+
+The upload step is now integrated into the build process, ensuring your CDN always has the latest courses when you build the desktop app.
 
 ---
 
@@ -165,19 +180,26 @@ npm run update:courses
 
 Combines both commands: generates and uploads in one step.
 
-### Full App Build
+### Full Desktop App Build
 
 ```bash
-npm run build              # Web + courses
-npm run tauri:build        # Desktop app
+npm run tauri:build        # Builds web app + uploads courses + builds desktop app
+npm run tauri:build:mac    # Same but for macOS (aarch64)
 ```
+
+This automatically:
+1. Generates courses.json from your COURSES_FOLDER
+2. Builds the Next.js web app
+3. **Uploads courses.json to your CDN** (automatically!)
+4. Builds the Tauri desktop app
 
 Only needed for:
 - Code changes
 - UI updates
 - Major app updates
+- First-time setup
 
-**Not needed** for just adding/removing courses!
+**Not needed** for just adding/removing courses! Use `npm run update:courses` instead.
 
 ---
 
