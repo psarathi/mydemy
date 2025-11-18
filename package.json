@@ -5,13 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "node fetchCoursesScript.js && cp courses.json public/courses.json && next build",
+    "build:courses": "node fetchCoursesScript.js && cp courses.json public/courses.json",
+    "upload:courses": "node uploadCoursesToCDN.js",
+    "update:courses": "npm run build:courses && npm run upload:courses",
     "start": "next start -p 4000",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "tauri:build:mac": "tauri build --target aarch64-apple-darwin"
+    "tauri:build": "npm run build && npm run upload:courses && tauri build",
+    "tauri:build:mac": "npm run build && npm run upload:courses && tauri build --target aarch64-apple-darwin"
   },
   "dependencies": {
     "dotenv": "^17.2.1",

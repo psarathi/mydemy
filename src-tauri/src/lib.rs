@@ -1,4 +1,93 @@
 use tauri::Manager;
+use serde_json::Value;
+use std::path::PathBuf;
+
+// Tauri command to fetch courses from remote endpoint
+#[tauri::command]
+async fn fetch_remote_courses(endpoint: String) -> Result<Value, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&endpoint)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch courses: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("HTTP error: {}", response.status()));
+    }
+
+    let courses: Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse courses JSON: {}", e))?;
+
+    Ok(courses)
+}
+
+// Tauri command to get cached courses from app data directory
+#[tauri::command]
+async fn get_cached_courses(app_handle: tauri::AppHandle) -> Result<Value, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    let courses_path = app_data_dir.join("courses.json");
+
+    if !courses_path.exists() {
+        return Err("No cached courses found".to_string());
+    }
+
+    let courses_str = tokio::fs::read_to_string(&courses_path)
+        .await
+        .map_err(|e| format!("Failed to read cached courses: {}", e))?;
+
+    let courses: Value = serde_json::from_str(&courses_str)
+        .map_err(|e| format!("Failed to parse cached courses: {}", e))?;
+
+    Ok(courses)
+}
+
+// Tauri command to update and cache courses
+#[tauri::command]
+async fn update_courses(app_handle: tauri::AppHandle, endpoint: String) -> Result<Value, String> {
+    // Fetch from remote
+    let courses = fetch_remote_courses(endpoint).await?;
+
+    // Save to app data directory
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    // Create directory if it doesn't exist
+    tokio::fs::create_dir_all(&app_data_dir)
+        .await
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+
+    let courses_path = app_data_dir.join("courses.json");
+    let courses_str = serde_json::to_string_pretty(&courses)
+        .map_err(|e| format!("Failed to serialize courses: {}", e))?;
+
+    tokio::fs::write(&courses_path, courses_str)
+        .await
+        .map_err(|e| format!("Failed to write courses to cache: {}", e))?;
+
+    Ok(courses)
+}
+
+// Tauri command to get bundled courses (fallback)
+#[tauri::command]
+async fn get_bundled_courses() -> Result<Value, String> {
+    // This will read from the bundled courses.json in the app resources
+    // The path is relative to the app's resource directory
+    let bundled_courses = include_str!("../../public/courses.json");
+    let courses: Value = serde_json::from_str(bundled_courses)
+        .map_err(|e| format!("Failed to parse bundled courses: {}", e))?;
+
+    Ok(courses)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,6 +131,12 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            fetch_remote_courses,
+            get_cached_courses,
+            update_courses,
+            get_bundled_courses
+        ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
