@@ -13,8 +13,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "tauri:dev": "tauri dev",
-    "tauri:build": "npm run build && npm run upload:courses && tauri build",
-    "tauri:build:mac": "npm run build && npm run upload:courses && tauri build --target aarch64-apple-darwin"
+    "tauri:build": "npm run build && tauri build",
+    "tauri:build:mac": "npm run build && tauri build --target aarch64-apple-darwin"
   },
   "dependencies": {
     "dotenv": "^17.2.1",

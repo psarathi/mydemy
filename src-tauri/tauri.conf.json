@@ -19,6 +19,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [
+      "../out/courses.json"
+    ],
     "macOS": {
       "minimumSystemVersion": "10.13",
       "exceptionDomain": ""

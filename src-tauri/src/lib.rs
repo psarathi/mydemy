@@ -79,14 +79,29 @@ async fn update_courses(app_handle: tauri::AppHandle, endpoint: String) -> Resul
 
 // Tauri command to get bundled courses (fallback)
 #[tauri::command]
-async fn get_bundled_courses() -> Result<Value, String> {
-    // This will read from the bundled courses.json in the app resources
-    // The path is relative to the app's resource directory
-    let bundled_courses = include_str!("../../public/courses.json");
-    let courses: Value = serde_json::from_str(bundled_courses)
-        .map_err(|e| format!("Failed to parse bundled courses: {}", e))?;
+async fn get_bundled_courses(app_handle: tauri::AppHandle) -> Result<Value, String> {
+    // Try to read from bundled resource directory
+    let resource_path = app_handle
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Failed to get resource directory: {}", e))?;
 
-    Ok(courses)
+    // The courses.json is bundled at _up_/out/courses.json relative to Resources
+    let courses_path = resource_path.join("_up_").join("out").join("courses.json");
+
+    if courses_path.exists() {
+        let courses_str = tokio::fs::read_to_string(&courses_path)
+            .await
+            .map_err(|e| format!("Failed to read bundled courses: {}", e))?;
+
+        let courses: Value = serde_json::from_str(&courses_str)
+            .map_err(|e| format!("Failed to parse bundled courses: {}", e))?;
+
+        return Ok(courses);
+    }
+
+    // Fallback: return empty array if no bundled courses found
+    Err(format!("Bundled courses not found at: {:?}", courses_path))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
