@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node fetchCoursesScript.js && cp courses.json public/courses.json && next build",
+    "build:nocache": "SKIP_COURSE_FETCH=true node fetchCoursesScript.js && cp courses.json public/courses.json && next build",
     "build:courses": "node fetchCoursesScript.js && cp courses.json public/courses.json",
     "upload:courses": "node uploadCoursesToCDN.js",
     "update:courses": "npm run build:courses && npm run upload:courses",
@@ -14,7 +15,9 @@
     "test:watch": "jest --watch",
     "tauri:dev": "tauri dev",
     "tauri:build": "npm run build && tauri build",
-    "tauri:build:mac": "npm run build && tauri build --target aarch64-apple-darwin"
+    "tauri:build:nocache": "npm run build:nocache && tauri build",
+    "tauri:build:mac": "npm run build && tauri build --target aarch64-apple-darwin",
+    "tauri:build:mac:nocache": "npm run build:nocache && tauri build --target aarch64-apple-darwin"
   },
   "dependencies": {
     "dotenv": "^17.2.1",

@@ -80,28 +80,65 @@ async fn update_courses(app_handle: tauri::AppHandle, endpoint: String) -> Resul
 // Tauri command to get bundled courses (fallback)
 #[tauri::command]
 async fn get_bundled_courses(app_handle: tauri::AppHandle) -> Result<Value, String> {
-    // Try to read from bundled resource directory
-    let resource_path = app_handle
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("Failed to get resource directory: {}", e))?;
+    // Try multiple paths for different environments
+    let mut tried_paths = Vec::new();
 
-    // The courses.json is bundled at _up_/out/courses.json relative to Resources
-    let courses_path = resource_path.join("_up_").join("out").join("courses.json");
+    // Path 1: Production bundle (_up_/out/courses.json in Resources)
+    if let Ok(resource_path) = app_handle.path().resource_dir() {
+        let courses_path = resource_path.join("_up_").join("out").join("courses.json");
+        tried_paths.push(format!("{:?}", courses_path));
 
-    if courses_path.exists() {
-        let courses_str = tokio::fs::read_to_string(&courses_path)
+        if courses_path.exists() {
+            println!("Found courses at: {:?}", courses_path);
+            let courses_str = tokio::fs::read_to_string(&courses_path)
+                .await
+                .map_err(|e| format!("Failed to read bundled courses: {}", e))?;
+
+            let courses: Value = serde_json::from_str(&courses_str)
+                .map_err(|e| format!("Failed to parse bundled courses: {}", e))?;
+
+            return Ok(courses);
+        }
+    }
+
+    // Path 2: Development mode (courses.json in project root)
+    if let Ok(app_dir) = app_handle.path().app_data_dir() {
+        // Go up to project root from app data dir
+        if let Some(project_root) = app_dir.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+            let dev_path = project_root.join("courses.json");
+            tried_paths.push(format!("{:?}", dev_path));
+
+            if dev_path.exists() {
+                println!("Found courses at: {:?}", dev_path);
+                let courses_str = tokio::fs::read_to_string(&dev_path)
+                    .await
+                    .map_err(|e| format!("Failed to read dev courses: {}", e))?;
+
+                let courses: Value = serde_json::from_str(&courses_str)
+                    .map_err(|e| format!("Failed to parse dev courses: {}", e))?;
+
+                return Ok(courses);
+            }
+        }
+    }
+
+    // Path 3: Try current directory (fallback for dev)
+    let current_dir_path = PathBuf::from("courses.json");
+    tried_paths.push(format!("{:?}", current_dir_path));
+
+    if current_dir_path.exists() {
+        println!("Found courses at: {:?}", current_dir_path);
+        let courses_str = tokio::fs::read_to_string(&current_dir_path)
             .await
-            .map_err(|e| format!("Failed to read bundled courses: {}", e))?;
+            .map_err(|e| format!("Failed to read current dir courses: {}", e))?;
 
         let courses: Value = serde_json::from_str(&courses_str)
-            .map_err(|e| format!("Failed to parse bundled courses: {}", e))?;
+            .map_err(|e| format!("Failed to parse current dir courses: {}", e))?;
 
         return Ok(courses);
     }
 
-    // Fallback: return empty array if no bundled courses found
-    Err(format!("Bundled courses not found at: {:?}", courses_path))
+    Err(format!("Bundled courses not found. Tried paths: {:?}", tried_paths))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
