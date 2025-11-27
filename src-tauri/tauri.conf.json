@@ -36,9 +36,11 @@
         "resizable": true,
         "fullscreen": false,
         "minWidth": 1024,
-        "minHeight": 768
+        "minHeight": 768,
+        "devtools": true
       }
     ],
+    "withGlobalTauri": true,
     "security": {
       "csp": null,
       "assetProtocol": {
