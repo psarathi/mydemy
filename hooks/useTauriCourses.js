@@ -32,60 +32,63 @@ export function useTauriCourses() {
                 setUpdateStatus('checking');
             }
 
-            // Try to get cached courses first (fast)
+            let loadedCourses = null;
+
+            // Step 1: Try to get cached courses first (fast)
             try {
+                console.log('Trying to load cached courses...');
                 const cachedCourses = await invoke('get_cached_courses');
-                setCourses(cachedCourses);
+                console.log('Cached courses loaded:', cachedCourses.length);
+                loadedCourses = cachedCourses;
                 setIsUsingFallback(false);
-                setIsLoading(false);
             } catch (cacheError) {
-                console.log('No cached courses, will fetch fresh data');
+                console.log('No cached courses available:', cacheError);
             }
 
-            // If we have a remote endpoint, try to fetch and update
+            // Step 2: Try bundled courses as fallback if no cached courses
+            if (!loadedCourses || loadedCourses.length === 0) {
+                try {
+                    console.log('Trying to load bundled courses...');
+                    const bundledCourses = await invoke('get_bundled_courses');
+                    console.log('Bundled courses loaded:', bundledCourses.length);
+                    loadedCourses = bundledCourses;
+                    setIsUsingFallback(true);
+                } catch (bundledError) {
+                    console.error('Failed to load bundled courses:', bundledError);
+                    throw new Error('Failed to load bundled courses: ' + bundledError);
+                }
+            }
+
+            // Set courses immediately with what we have
+            if (loadedCourses && loadedCourses.length > 0) {
+                setCourses(loadedCourses);
+                setIsLoading(false);
+            }
+
+            // Step 3: If we have a remote endpoint, try to fetch and update in background
             if (coursesEndpoint) {
                 if (showUpdatingStatus) {
                     setUpdateStatus('downloading');
                 }
 
                 try {
+                    console.log('Fetching remote courses from:', coursesEndpoint);
                     const remoteCourses = await invoke('update_courses', {
                         endpoint: coursesEndpoint
                     });
+                    console.log('Remote courses loaded:', remoteCourses.length);
 
                     setCourses(remoteCourses);
                     setIsUsingFallback(false);
                     setUpdateStatus('success');
 
-                    // Auto-hide success status after 3 seconds
                     setTimeout(() => {
                         setUpdateStatus('idle');
                     }, 3000);
                 } catch (remoteError) {
                     console.warn('Failed to fetch remote courses:', remoteError);
-
-                    // If we already have cached courses, keep using them
-                    if (courses.length > 0) {
-                        setUpdateStatus('error');
-                        setErrorMessage('Failed to check for updates. Using cached version.');
-                        setTimeout(() => {
-                            setUpdateStatus('idle');
-                        }, 5000);
-                    } else {
-                        // No cached courses, try bundled fallback
-                        const bundledCourses = await invoke('get_bundled_courses');
-                        setCourses(bundledCourses);
-                        setIsUsingFallback(true);
-                        setUpdateStatus('error');
-                        setErrorMessage('Using offline version. Check your connection.');
-                    }
-                }
-            } else {
-                // No remote endpoint configured, try cached or bundled
-                if (courses.length === 0) {
-                    const bundledCourses = await invoke('get_bundled_courses');
-                    setCourses(bundledCourses);
-                    setIsUsingFallback(true);
+                    // Keep using the courses we already loaded
+                    setUpdateStatus('idle');
                 }
             }
 
@@ -97,7 +100,7 @@ export function useTauriCourses() {
             setIsLoading(false);
             setUpdateStatus('error');
         }
-    }, [coursesEndpoint, courses.length]);
+    }, [coursesEndpoint]);
 
     /**
      * Manual refresh/update trigger
