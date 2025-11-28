@@ -3325,3 +3325,77 @@ input:focus + .slider {
         width: 100%;
     }
 }
+
+/* Offline Download Button Styles */
+.offline-download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.offline-download-btn:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.offline-download-btn.checking {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.offline-download-btn.checking svg {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.offline-download-btn.downloading {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.offline-download-btn.downloading svg {
+    animation: bounce 1s ease-in-out infinite;
+}
+
+.offline-download-btn.downloaded {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+}
+
+.offline-download-btn.downloaded:hover {
+    background: var(--error);
+    border-color: var(--error);
+}
+
+.offline-download-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
