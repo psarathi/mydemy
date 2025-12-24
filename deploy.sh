@@ -5,12 +5,17 @@
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
-echo "🚀 Starting deployment..."
+# Default to main if no argument provided
+BRANCH=${1:-main}
+
+echo "🚀 Starting deployment for branch: $BRANCH..."
 echo ""
 
-# Pull latest changes from origin/main
-echo "📥 Pulling latest changes from origin/main..."
-git pull origin main
+# Pull latest changes from origin/$BRANCH
+echo "📥 Pulling latest changes from origin/$BRANCH..."
+git fetch origin $BRANCH
+git checkout $BRANCH
+git pull origin $BRANCH
 echo "✅ Git pull completed"
 echo ""
 

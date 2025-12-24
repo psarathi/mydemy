@@ -1,9 +1,10 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '../../constants';
+import React, { useEffect, useRef, useState } from 'react';
+import { VIDEO_MIME_TYPES } from '../../constants';
+import { getCdnPath } from '../../utils/cdn';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
-function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
+function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
@@ -75,7 +76,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         track.kind = 'captions';
         track.label = 'English';
         track.srclang = 'en';
-        track.src = `${BASE_CDN_PATH}/${currentSubtitle}`;
+        track.src = `${getCdnPath()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
             if (vp.current && vp.current.textTracks && vp.current.textTracks[0]) {
@@ -164,7 +165,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                     <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
                 </div>
                 <div className='video-controls'>
-                    <button 
+                    <button
                         className='control-btn'
                         onClick={() => {
                             if (vp.current.paused) {
@@ -220,7 +221,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                     )}
                 </div>
             </div>
-            
+
             <div className='video-player-wrapper'>
                 <div className='video-aspect-container'>
                     {currentVideo ? (
@@ -240,15 +241,15 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                             onError={(e) => console.error('Video error:', e)}
                         >
                             <source
-                                src={`${BASE_CDN_PATH}/${currentVideo}`}
+                                src={`${getCdnPath()}/${currentVideo}`}
                                 type={(() => {
                                     const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
                                     return VIDEO_MIME_TYPES[ext] || 'video/mp4';
                                 })()}
                             />
                             <p className='video-fallback'>
-                                Your browser doesn&apos;t support HTML5 video. 
-                                <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
+                                Your browser doesn&apos;t support HTML5 video.
+                                <a href={`${getCdnPath()}/${currentVideo}`}>Download the video</a> instead.
                             </p>
                         </video>
                     ) : (

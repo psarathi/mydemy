@@ -6,6 +6,12 @@ import useSWR from 'swr';
 // Mock the hooks
 jest.mock('../../hooks/useTauriCourses');
 jest.mock('swr');
+jest.mock('../../utils/cdn', () => ({
+    __esModule: true,
+    isLocalhost: jest.fn(() => false)
+}));
+
+import { isLocalhost } from '../../utils/cdn';
 
 const originalWindow = global.window;
 
@@ -73,7 +79,7 @@ describe('useCourses', () => {
             delete global.window.__TAURI__;
         });
 
-        it('should use remote endpoint when configured', () => {
+        it('should use remote endpoint when configured (non-localhost)', () => {
             const mockCourses = [{ name: 'Course 1', topics: [] }];
             useSWR.mockReturnValue({
                 data: mockCourses,
@@ -83,6 +89,9 @@ describe('useCourses', () => {
             });
 
             process.env.NEXT_PUBLIC_COURSES_ENDPOINT = 'http://example.com/courses.json';
+
+            // Mock non-localhost environment
+            isLocalhost.mockReturnValue(false);
 
             renderHook(() => useCourses());
 
@@ -97,6 +106,28 @@ describe('useCourses', () => {
             );
         });
 
+        it('should fallback to /api/courses when on localhost even if endpoint configured', () => {
+            useSWR.mockReturnValue({
+                data: [],
+                error: null,
+                isLoading: false,
+                mutate: jest.fn(),
+            });
+
+            process.env.NEXT_PUBLIC_COURSES_ENDPOINT = 'http://example.com/courses.json';
+
+            // Simulate localhost
+            isLocalhost.mockReturnValue(true);
+
+            renderHook(() => useCourses());
+
+            expect(useSWR).toHaveBeenCalledWith(
+                '/api/courses',
+                expect.any(Function),
+                expect.any(Object)
+            );
+        });
+
         it('should fallback to /api/courses when no endpoint configured', () => {
             useSWR.mockReturnValue({
                 data: [],
@@ -106,6 +137,7 @@ describe('useCourses', () => {
             });
 
             delete process.env.NEXT_PUBLIC_COURSES_ENDPOINT;
+            isLocalhost.mockReturnValue(false);
 
             renderHook(() => useCourses());
 

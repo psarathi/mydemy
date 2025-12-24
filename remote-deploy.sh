@@ -157,6 +157,14 @@ if [ -z "$SSH_USER" ]; then
     SSH_USER=$(whoami)
 fi
 
+# Get current git branch
+if command -v git &> /dev/null; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+else
+    CURRENT_BRANCH="main"
+    echo -e "${YELLOW}Warning: git command not found, defaulting to 'main' branch${NC}"
+fi
+
 # Build SSH command with ControlMaster for persistent connection
 SSH_CMD="ssh -p $SSH_PORT"
 if [ -n "$SSH_KEY" ]; then
@@ -184,6 +192,7 @@ echo ""
 echo -e "${YELLOW}Deployment Configuration:${NC}"
 echo -e "  Server:     ${GREEN}${SSH_USER}@${SSH_HOST}:${SSH_PORT}${NC}"
 echo -e "  Directory:  ${GREEN}${REMOTE_DIR}${NC}"
+echo -e "  Branch:     ${GREEN}${CURRENT_BRANCH}${NC}"
 echo -e "  Script:     ${GREEN}${DEPLOY_SCRIPT}${NC}"
 if [ -n "$SSH_KEY" ]; then
     echo -e "  SSH Key:    ${GREEN}${SSH_KEY}${NC}"
@@ -262,7 +271,7 @@ echo -e "${BLUE}🚀 Starting remote deployment...${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════${NC}"
 echo ""
 
-$SSH_CMD "cd '$REMOTE_DIR' && bash '$DEPLOY_SCRIPT'"
+$SSH_CMD "cd '$REMOTE_DIR' && bash '$DEPLOY_SCRIPT' '$CURRENT_BRANCH'"
 
 DEPLOY_STATUS=$?
 

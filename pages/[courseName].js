@@ -1,25 +1,26 @@
 import Link from 'next/link';
-import {useSearchParams} from 'next/navigation';
-import React, {useEffect, useState, useRef} from 'react';
+import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '../constants';
-import {addToHistory} from '../utils/courseTracking';
-import {useSession} from 'next-auth/react';
-import {useCourses} from '../hooks/useCourses';
+import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS } from '../constants';
+import { getCdnPath } from '../utils/cdn';
+import { addToHistory } from '../utils/courseTracking';
+import { useSession } from 'next-auth/react';
+import { useCourses } from '../hooks/useCourses';
 
-function CourseName({courseName}) {
+function CourseName({ courseName }) {
     const searchParams = useSearchParams();
     const topic = searchParams.get('topic');
     const lesson = searchParams.get('lesson');
-    const {courses, isLoading} = useCourses();
+    const { courses, isLoading } = useCourses();
     const course = courses.find((c) => c.name === courseName);
-    const {data: session} = useSession();
+    const { data: session } = useSession();
     const videoFileList = course
         ? course.topics.flatMap((t) => {
-              return t.files
-                  .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
-                  .map((f) => getFileName(course, t, f));
-          })
+            return t.files
+                .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
+                .map((f) => getFileName(course, t, f));
+        })
         : [];
     const getVideoFileIndex = (topic, lesson) => {
         let lessonFileName;
@@ -120,7 +121,7 @@ function CourseName({courseName}) {
     };
 
     function copyVideoURL(e, filePath) {
-        navigator.clipboard.writeText(`${BASE_CDN_PATH}/${filePath}`);
+        navigator.clipboard.writeText(`${getCdnPath()}/${filePath}`);
         e.stopPropagation();
     }
 
@@ -149,7 +150,7 @@ function CourseName({courseName}) {
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                     }} />
-                    <p style={{color: 'var(--text-secondary)', fontSize: '14px'}}>Loading course...</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading course...</p>
                 </div>
             </div>
         );
@@ -165,7 +166,7 @@ function CourseName({courseName}) {
                         </svg>
                     </button>
                 )}
-                
+
                 <aside className={`modern-sidebar ${isSidebarCollapsed ? 'hidden' : ''}`}>
                     <header className='modern-course-header'>
                         <div className='modern-nav-controls'>
@@ -175,8 +176,8 @@ function CourseName({courseName}) {
                                 </svg>
                                 <span>All Courses</span>
                             </Link>
-                            <button 
-                                className='modern-collapse-btn' 
+                            <button
+                                className='modern-collapse-btn'
                                 onClick={collapseSideBar}
                                 aria-label="Collapse sidebar"
                             >
@@ -203,7 +204,7 @@ function CourseName({courseName}) {
                             </span>
                         </div>
                     </header>
-                    
+
                     <div className='modern-content-list'>
                         {course.topics.map((topic, topicIndex) => (
                             <div key={topicIndex} className='modern-topic-section'>
@@ -213,7 +214,7 @@ function CourseName({courseName}) {
                                         {topic.files.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length} lessons
                                     </span>
                                 </div>
-                                
+
                                 <div className='modern-lessons-list'>
                                     {topic.files
                                         .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
@@ -221,9 +222,8 @@ function CourseName({courseName}) {
                                             <div
                                                 key={fileIndex}
                                                 ref={file.fileName === currentVideo ? activeElementRef : null}
-                                                className={`modern-lesson-item ${
-                                                    file.fileName === currentVideo ? 'active' : ''
-                                                }`}
+                                                className={`modern-lesson-item ${file.fileName === currentVideo ? 'active' : ''
+                                                    }`}
                                                 onClick={() =>
                                                     playSelectedVideo(
                                                         getFileName(course, topic, file)
@@ -269,7 +269,7 @@ function CourseName({courseName}) {
                         ))}
                     </div>
                 </aside>
-                
+
                 <main className='modern-video-section'>
                     <VideoPlayer
                         videoFile={videoFile}
@@ -302,7 +302,7 @@ function CourseName({courseName}) {
 
 export default CourseName;
 
-export async function getStaticProps({params: {courseName}}) {
+export async function getStaticProps({ params: { courseName } }) {
     const staticExport = process.env.TAURI_BUILD === 'true';
 
     return {
@@ -310,7 +310,7 @@ export async function getStaticProps({params: {courseName}}) {
             courseName,
         },
         // ISR is not compatible with static export
-        ...(staticExport ? {} : {revalidate: 3600 * 24}),
+        ...(staticExport ? {} : { revalidate: 3600 * 24 }),
     };
 }
 

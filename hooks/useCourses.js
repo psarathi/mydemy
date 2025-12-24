@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { useTauriCourses } from './useTauriCourses';
+import { isLocalhost } from '../utils/cdn';
 
 const fetcher = async (url) => {
     const res = await fetch(url);
@@ -22,7 +23,14 @@ export function useCourses() {
     }
 
     // Web app: Use SWR with remote endpoint or API route
-    const remoteEndpoint = process.env.NEXT_PUBLIC_COURSES_ENDPOINT;
+    let remoteEndpoint = process.env.NEXT_PUBLIC_COURSES_ENDPOINT;
+
+    // If running on localhost (dev), force use of local API proxy to avoid CORS
+    // since the remote CDN is likely on a different origin (e.g. 192.168.x.x)
+    if (isLocalhost()) {
+        remoteEndpoint = null;
+    }
+
     const endpoint = remoteEndpoint || '/api/courses';
 
     const { data, error, isLoading, mutate } = useSWR(
