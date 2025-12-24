@@ -32,4 +32,5 @@ if (process.env.SKIP_COURSE_FETCH === 'true') {
     }
 }
 
-fetchCourses([], true);
+const enableLogging = process.env.ENABLE_LOGGING === 'true';
+fetchCourses([], enableLogging);
