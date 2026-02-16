@@ -67,7 +67,7 @@ describe('topicNameSorter', () => {
         const sorted = topics.sort(topicNameSorter);
 
         expect(sorted[0].name).toBe('1. Introduction');
-        expect(sorted[1].name).toBe('10. Advanced Topics');
-        expect(sorted[2].name).toBe('2. Basic Topics');
+        expect(sorted[1].name).toBe('2. Basic Topics');
+        expect(sorted[2].name).toBe('10. Advanced Topics');
     });
 });
