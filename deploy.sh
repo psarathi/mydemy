@@ -2,8 +2,25 @@
 
 # Deployment script for mydemy
 # This script pulls latest changes, builds the project, and restarts PM2
+#
+# Usage: ./deploy.sh [--with-courses]
+#   --with-courses  Re-scan and process all courses before building
 
 set -e  # Exit immediately if a command exits with a non-zero status
+
+# Parse arguments
+PROCESS_COURSES=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --with-courses)
+            PROCESS_COURSES=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
 
 echo "🚀 Starting deployment..."
 echo ""
@@ -20,9 +37,18 @@ npm install
 echo "✅ Dependencies installed"
 echo ""
 
+# Process courses if requested
+if [ "$PROCESS_COURSES" = true ]; then
+    echo "📚 Processing courses..."
+    node fetchCoursesScript.js
+    cp courses.json public/courses.json
+    echo "✅ Courses processed and copied"
+    echo ""
+fi
+
 # Build the project
 echo "🔨 Building the project..."
-npm run build
+npx next build
 echo "✅ Build completed"
 echo ""
 

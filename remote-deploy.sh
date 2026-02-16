@@ -17,6 +17,7 @@ DEPLOY_SCRIPT="./deploy.sh"
 SSH_PORT=22
 RUN_TESTS=false
 SKIP_CONFIRMATION=false
+PROCESS_COURSES=false
 
 # SSH ControlMaster settings for persistent connection (ask password only once)
 SSH_CONTROL_PATH="/tmp/ssh-control-%r@%h:%p"
@@ -78,6 +79,7 @@ usage() {
     echo "  -s, --script SCRIPT      Deploy script name (default: ./deploy.sh, can be set via DEPLOY_SCRIPT_NAME in .env)"
     echo "  -k, --key KEY_FILE       SSH private key file (can be set via DEPLOY_SSH_KEY in .env)"
     echo "  -t, --test               Run unit tests before deployment"
+    echo "  -c, --with-courses       Re-scan and process all courses (skipped by default)"
     echo "  -y, --yes                Skip confirmation prompt (auto-approve deployment)"
     echo "  --help                   Display this help message"
     echo ""
@@ -129,6 +131,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -y|--yes)
             SKIP_CONFIRMATION=true
+            shift
+            ;;
+        -c|--with-courses)
+            PROCESS_COURSES=true
             shift
             ;;
         --help)
@@ -189,6 +195,7 @@ if [ -n "$SSH_KEY" ]; then
     echo -e "  SSH Key:    ${GREEN}${SSH_KEY}${NC}"
 fi
 echo -e "  Run Tests:  ${GREEN}${RUN_TESTS}${NC}"
+echo -e "  Courses:    ${GREEN}${PROCESS_COURSES}${NC}"
 echo ""
 
 # Confirm before proceeding
@@ -262,7 +269,12 @@ echo -e "${BLUE}🚀 Starting remote deployment...${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════${NC}"
 echo ""
 
-$SSH_CMD "cd '$REMOTE_DIR' && bash '$DEPLOY_SCRIPT'"
+DEPLOY_CMD="bash '$DEPLOY_SCRIPT'"
+if [ "$PROCESS_COURSES" = true ]; then
+    DEPLOY_CMD="bash '$DEPLOY_SCRIPT' --with-courses"
+fi
+
+$SSH_CMD "cd '$REMOTE_DIR' && $DEPLOY_CMD"
 
 DEPLOY_STATUS=$?
 
