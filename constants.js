@@ -20,8 +20,8 @@ exports.CONSOLE_COLOR_THEME = {
 };
 exports.COURSES_FILE_NAME = 'courses.json';
 
-// Supported video file extensions
-exports.SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
+// Supported video file extensions (must match VIDEO_FILE_EXTENSIONS in fetchCourseListingsV3.js)
+exports.SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.mpeg', '.mpg', '.3gp', '.ogv', '.ts'];
 
 // Video MIME types mapping
 exports.VIDEO_MIME_TYPES = {
@@ -32,5 +32,10 @@ exports.VIDEO_MIME_TYPES = {
     '.webm': 'video/webm',
     '.flv': 'video/x-flv',
     '.wmv': 'video/x-ms-wmv',
-    '.m4v': 'video/mp4'
+    '.m4v': 'video/mp4',
+    '.mpeg': 'video/mpeg',
+    '.mpg': 'video/mpeg',
+    '.3gp': 'video/3gpp',
+    '.ogv': 'video/ogg',
+    '.ts': 'video/mp2t'
 };
