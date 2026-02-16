@@ -61,15 +61,17 @@ export default function Home() {
                 <div
                     style={{
                         position: 'fixed',
-                        top: '20px',
-                        right: '20px',
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        padding: '16px 24px',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        top: '16px',
+                        right: '16px',
+                        backgroundColor: 'var(--success)',
+                        color: '#fff',
+                        padding: '12px 20px',
+                        borderRadius: 'var(--radius)',
+                        boxShadow: 'var(--shadow-md)',
                         zIndex: 1000,
-                        animation: 'slideIn 0.3s ease-out',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        animation: 'fadeIn 0.2s ease',
                     }}
                 >
                     {notification}

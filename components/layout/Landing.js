@@ -7,7 +7,7 @@ import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
 import {addToHistory} from '../../utils/courseTracking';
-import {addTag, removeTag, getTags} from '../../utils/tagging';
+import {addTag, removeTag, getTags, getTagCounts} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 import {useCourses} from '../../hooks/useCourses';
@@ -29,7 +29,14 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [exactSearch, setExactSearch] = useState(exact);
     const [searchInLessons, setSearchInLessons] = useState(false);
     const [previewCourse, setPreviewCourse] = useState({});
+    const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+    const [activeTags, setActiveTags] = useState([]);
+    const [tagFilterMode, setTagFilterMode] = useState('OR');
+    const [allTagCounts, setAllTagCounts] = useState([]);
+    const [showAutocomplete, setShowAutocomplete] = useState(false);
+    const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
     const searchField = useRef(null);
+    const autocompleteRef = useRef(null);
     const {data: session} = useSession();
     const {courses, isLoading, mutate} = useCourses();
 
@@ -51,21 +58,78 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         }
     }, [searchTerm]);
 
-    // Filter courses based on search
+    // Load and refresh tag counts
     useEffect(() => {
-        if (!searchTerm) {
-            setCourseList(courses);
-        } else if (searchTerm.startsWith('#')) {
-            const tag = searchTerm.substring(1);
-            const filterCourses = (c) => {
-                const courseTags = getTags(c.name);
-                return courseTags.includes(tag);
-            };
-            setCourseList(courses.filter(filterCourses));
+        setAllTagCounts(getTagCounts());
+
+        const handleTagsUpdated = () => {
+            const counts = getTagCounts();
+            setAllTagCounts(counts);
+            // Clean up activeTags that no longer exist
+            const existingTags = new Set(counts.map(c => c.tag));
+            setActiveTags(prev => prev.filter(t => existingTags.has(t)));
+        };
+
+        window.addEventListener('courseTagsUpdated', handleTagsUpdated);
+        return () => window.removeEventListener('courseTagsUpdated', handleTagsUpdated);
+    }, []);
+
+    // Autocomplete: show when typing # in search
+    const autocompleteResults = React.useMemo(() => {
+        if (!searchTerm.startsWith('#') || searchTerm === '#') {
+            // Show all tags when just '#' is typed
+            if (searchTerm === '#') return allTagCounts.slice(0, 8);
+            return [];
+        }
+        const query = searchTerm.substring(1).toLowerCase();
+        return allTagCounts
+            .filter(t => t.tag.toLowerCase().includes(query))
+            .slice(0, 8);
+    }, [searchTerm, allTagCounts]);
+
+    // Show/hide autocomplete based on search term
+    useEffect(() => {
+        if (searchTerm.startsWith('#') && autocompleteResults.length > 0) {
+            setShowAutocomplete(true);
+            setAutocompleteIndex(-1);
         } else {
+            setShowAutocomplete(false);
+        }
+    }, [searchTerm, autocompleteResults]);
+
+    // Close autocomplete when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (autocompleteRef.current && !autocompleteRef.current.contains(e.target) &&
+                searchField.current && !searchField.current.contains(e.target)) {
+                setShowAutocomplete(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Filter courses based on search + active tags
+    useEffect(() => {
+        let filtered = courses;
+
+        // Step 1: Filter by active tags
+        if (activeTags.length > 0) {
+            filtered = filtered.filter(c => {
+                const courseTags = getTags(c.name);
+                if (tagFilterMode === 'AND') {
+                    return activeTags.every(t => courseTags.includes(t));
+                } else {
+                    return activeTags.some(t => courseTags.includes(t));
+                }
+            });
+        }
+
+        // Step 2: Filter by search term
+        if (searchTerm && !searchTerm.startsWith('#')) {
             let searchTermParts = searchTerm.trim().split(' ');
 
-            const filterCourses = (c) => {
+            filtered = filtered.filter(c => {
                 const courseNameMatch = !exactSearch
                     ? searchTermParts.some(
                           (p) => c.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
@@ -91,16 +155,25 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 }
 
                 return courseNameMatch;
-            };
-
-            setCourseList(courses.filter(filterCourses));
+            });
+        } else if (searchTerm.startsWith('#') && searchTerm.length > 1) {
+            // Legacy single-tag search via #tag (still works while autocomplete is open)
+            const tag = searchTerm.substring(1).toLowerCase();
+            filtered = filtered.filter(c => {
+                const courseTags = getTags(c.name);
+                return courseTags.includes(tag);
+            });
         }
-    }, [searchTerm, exactSearch, searchInLessons, courses]);
+
+        setCourseList(filtered);
+    }, [searchTerm, exactSearch, searchInLessons, courses, activeTags, tagFilterMode]);
 
     useEffect(() => {
         function handleTagClick(event) {
-            // Prepend '#' to trigger tag search
-            setSearchTerm(`#${event.detail.tag}`);
+            const tag = event.detail.tag;
+            setActiveTags(prev =>
+                prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+            );
         }
 
         window.addEventListener('tagClicked', handleTagClick);
@@ -114,7 +187,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             }
             // Clear search on Escape key
             if (e.key === 'Escape' && searchField.current === document.activeElement) {
-                setSearchTerm('');
+                if (showAutocomplete) {
+                    setShowAutocomplete(false);
+                } else {
+                    setSearchTerm('');
+                }
             }
         }
 
@@ -122,12 +199,30 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         return function cleanup() {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [showAutocomplete]);
 
     function showCourseDetails(e, course) {
-        previewCourse.name === course.name
-            ? setPreviewCourse({})
-            : setPreviewCourse(course);
+        if (previewCourse.name === course.name) {
+            setPreviewCourse({});
+            setMobilePreviewOpen(false);
+        } else {
+            setPreviewCourse(course);
+        }
+    }
+
+    function handlePreviewTap(e, course) {
+        e.stopPropagation();
+        if (previewCourse.name === course.name && mobilePreviewOpen) {
+            setPreviewCourse({});
+            setMobilePreviewOpen(false);
+        } else {
+            setPreviewCourse(course);
+            setMobilePreviewOpen(true);
+        }
+    }
+
+    function closeMobilePreview() {
+        setMobilePreviewOpen(false);
     }
 
     const handleCourseClick = (course) => {
@@ -137,6 +232,45 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const clearSearch = () => {
         setSearchTerm('');
         searchField.current?.focus();
+    };
+
+    const selectAutocompleteTag = (tag) => {
+        setActiveTags(prev =>
+            prev.includes(tag) ? prev : [...prev, tag]
+        );
+        setSearchTerm('');
+        setShowAutocomplete(false);
+        setAutocompleteIndex(-1);
+        searchField.current?.focus();
+    };
+
+    const toggleTag = (tag) => {
+        setActiveTags(prev =>
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+    };
+
+    const clearActiveTags = () => {
+        setActiveTags([]);
+    };
+
+    const handleSearchKeyDown = (e) => {
+        if (showAutocomplete && autocompleteResults.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setAutocompleteIndex(prev =>
+                    prev < autocompleteResults.length - 1 ? prev + 1 : 0
+                );
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setAutocompleteIndex(prev =>
+                    prev > 0 ? prev - 1 : autocompleteResults.length - 1
+                );
+            } else if (e.key === 'Enter' && autocompleteIndex >= 0) {
+                e.preventDefault();
+                selectAutocompleteTag(autocompleteResults[autocompleteIndex].tag);
+            }
+        }
     };
 
     const handleBulkAddTag = (tagValue) => {
@@ -228,9 +362,10 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                             autoFocus
                             type='text'
                             className='modern-search-input'
-                            placeholder='Search courses...'
+                            placeholder='Search courses... (type # to filter by tag)'
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
                         />
                         {searchTerm && (
                             <button
@@ -244,6 +379,24 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                     <line x1="6" y1="6" x2="18" y2="18"></line>
                                 </svg>
                             </button>
+                        )}
+                        {showAutocomplete && (
+                            <div className='tag-autocomplete' ref={autocompleteRef}>
+                                {autocompleteResults.map((item, i) => (
+                                    <div
+                                        key={item.tag}
+                                        className={`tag-autocomplete-item ${i === autocompleteIndex ? 'active' : ''}`}
+                                        onClick={() => selectAutocompleteTag(item.tag)}
+                                        onMouseEnter={() => setAutocompleteIndex(i)}
+                                    >
+                                        <span className='tag-autocomplete-name'>#{item.tag}</span>
+                                        <span className='tag-autocomplete-count'>{item.count} {item.count === 1 ? 'course' : 'courses'}</span>
+                                    </div>
+                                ))}
+                                {autocompleteResults.length === 0 && searchTerm.length > 1 && (
+                                    <div className='tag-autocomplete-empty'>No matching tags</div>
+                                )}
+                            </div>
                         )}
                     </div>
                     <div className='search-controls'>
@@ -263,7 +416,38 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                         </label>
                     </div>
                 </div>
-                
+
+                {allTagCounts.length > 0 && (
+                    <div className='tag-filter-bar'>
+                        <button
+                            className='tag-filter-mode-btn'
+                            onClick={() => setTagFilterMode(prev => prev === 'OR' ? 'AND' : 'OR')}
+                            title={tagFilterMode === 'OR' ? 'Showing courses with ANY selected tag' : 'Showing courses with ALL selected tags'}
+                        >
+                            {tagFilterMode}
+                        </button>
+                        {allTagCounts.map(({tag, count}) => (
+                            <button
+                                key={tag}
+                                className={`tag-filter-pill ${activeTags.includes(tag) ? 'active' : ''}`}
+                                onClick={() => toggleTag(tag)}
+                            >
+                                <span>#{tag}</span>
+                                <span className='tag-filter-pill-count'>{count}</span>
+                            </button>
+                        ))}
+                        {activeTags.length > 0 && (
+                            <button className='tag-filter-clear' onClick={clearActiveTags}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 <div className='courses-header'>
                     <div>
                         <h1>Courses</h1>
@@ -365,6 +549,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                 <button
                                     className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
                                     aria-label={`Preview ${course.name}`}
+                                    onClick={(e) => handlePreviewTap(e, course)}
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -377,10 +562,17 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 </div>
             </div>
             
-            <div className='preview-section'>
+            {mobilePreviewOpen && <div className='mobile-preview-overlay' onClick={closeMobilePreview} />}
+            <div className={`preview-section ${mobilePreviewOpen ? 'mobile-open' : ''}`}>
                 {previewCourse?.name ? (
                     <>
                         <div className='preview-header'>
+                            <button className='mobile-preview-close' onClick={closeMobilePreview} aria-label="Close preview">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
                             <h2>{previewCourse.name}</h2>
                             <div className='preview-stats'>
                                 <div className='stat-badge'>

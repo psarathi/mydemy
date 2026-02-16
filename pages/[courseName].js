@@ -51,7 +51,12 @@ function CourseName({courseName}) {
     const [subtitlesFile, setSubtitlesFile] = useState(
         videoFileList[0] ? videoFileList[0].replace(/\.[^.]+$/, '.vtt') : ''
     );
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth <= 1024;
+        }
+        return false;
+    });
     const activeElementRef = useRef(null);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
