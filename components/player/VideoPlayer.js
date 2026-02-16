@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
+import mpegts from 'mpegts.js';
 import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
 function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const vp = useRef(null);
-    const hlsRef = useRef(null);
+    const playerRef = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
@@ -150,40 +150,42 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         endHandler(true);
     }, [videoFile, subtitlesFile]);
 
-    // hls.js integration for .ts files
+    // mpegts.js integration for .ts files
     useEffect(() => {
         if (!vp.current || !currentVideo) return;
 
-        // Cleanup previous Hls instance
-        if (hlsRef.current) {
-            hlsRef.current.destroy();
-            hlsRef.current = null;
+        // Cleanup previous mpegts player
+        if (playerRef.current) {
+            playerRef.current.pause();
+            playerRef.current.unload();
+            playerRef.current.detachMediaElement();
+            playerRef.current.destroy();
+            playerRef.current = null;
         }
 
-        if (currentVideo.endsWith('.ts') && Hls.isSupported()) {
-            const hls = new Hls();
-            hlsRef.current = hls;
-            hls.loadSource(`${BASE_CDN_PATH}/${currentVideo}`);
-            hls.attachMedia(vp.current);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                vp.current?.play();
+        if (currentVideo.endsWith('.ts') && mpegts.isSupported()) {
+            const player = mpegts.createPlayer({
+                type: 'mpegts',
+                isLive: false,
+                url: `${BASE_CDN_PATH}/${currentVideo}`,
             });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS error:', data);
-                if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        hls.startLoad();
-                    } else {
-                        hls.destroy();
-                    }
-                }
+            playerRef.current = player;
+            player.attachMediaElement(vp.current);
+            player.load();
+            player.play().catch((e) => console.warn('Autoplay blocked:', e));
+
+            player.on(mpegts.Events.ERROR, (errorType, errorDetail, errorInfo) => {
+                console.error('mpegts.js error:', errorType, errorDetail, errorInfo);
             });
         }
 
         return () => {
-            if (hlsRef.current) {
-                hlsRef.current.destroy();
-                hlsRef.current = null;
+            if (playerRef.current) {
+                playerRef.current.pause();
+                playerRef.current.unload();
+                playerRef.current.detachMediaElement();
+                playerRef.current.destroy();
+                playerRef.current = null;
             }
         };
     }, [currentVideo]);

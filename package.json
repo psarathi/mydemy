@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "dotenv": "^17.2.1",
-    "hls.js": "^1.6.15",
     "kafkajs": "^2.2.4",
+    "mpegts.js": "^1.8.0",
     "next": "^15.0.0",
     "next-auth": "^4.24.11",
     "react": "^18.3.0",
