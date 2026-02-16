@@ -1,12 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-
 import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
 function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const vp = useRef(null);
-    const playerRef = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
@@ -15,7 +13,6 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const [nextVideoInfo, setNextVideoInfo] = useState(null);
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
-    const isTsFile = currentVideo?.endsWith('.ts');
 
     const endHandler = (userSelected = false) => {
         if (userSelected) {
@@ -150,53 +147,6 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         endHandler(true);
     }, [videoFile, subtitlesFile]);
 
-    // mpegts.js integration for .ts files (dynamic import to avoid SSR window error)
-    useEffect(() => {
-        if (!vp.current || !currentVideo || !currentVideo.endsWith('.ts')) return;
-
-        let player = null;
-        let cancelled = false;
-
-        (async () => {
-            const mpegts = (await import('mpegts.js')).default;
-
-            if (cancelled || !vp.current || !mpegts.isSupported()) return;
-
-            // Cleanup previous mpegts player
-            if (playerRef.current) {
-                playerRef.current.pause();
-                playerRef.current.unload();
-                playerRef.current.detachMediaElement();
-                playerRef.current.destroy();
-                playerRef.current = null;
-            }
-
-            player = mpegts.createPlayer({
-                type: 'mpegts',
-                isLive: false,
-                url: `${BASE_CDN_PATH}/${currentVideo}`,
-            });
-            playerRef.current = player;
-            player.attachMediaElement(vp.current);
-            player.load();
-            player.play().catch((e) => console.warn('Autoplay blocked:', e));
-
-            player.on(mpegts.Events.ERROR, (errorType, errorDetail, errorInfo) => {
-                console.error('mpegts.js error:', errorType, errorDetail, errorInfo);
-            });
-        })();
-
-        return () => {
-            cancelled = true;
-            if (playerRef.current) {
-                playerRef.current.pause();
-                playerRef.current.unload();
-                playerRef.current.detachMediaElement();
-                playerRef.current.destroy();
-                playerRef.current = null;
-            }
-        };
-    }, [currentVideo]);
 
     const getVideoDuration = () => {
         if (vp.current.duration) {
@@ -304,16 +254,13 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             controlsList="nodownload"
                             onError={(e) => console.error('Video error:', e)}
                         >
-                            {/* For .ts files, hls.js attaches the source directly */}
-                            {!isTsFile && (
-                                <source
-                                    src={`${BASE_CDN_PATH}/${currentVideo}`}
-                                    type={(() => {
-                                        const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
-                                        return VIDEO_MIME_TYPES[ext] || 'video/mp4';
-                                    })()}
-                                />
-                            )}
+                            <source
+                                src={`${BASE_CDN_PATH}/${currentVideo}`}
+                                type={(() => {
+                                    const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
+                                    return VIDEO_MIME_TYPES[ext] || 'video/mp4';
+                                })()}
+                            />
                             <p className='video-fallback'>
                                 Your browser doesn&apos;t support HTML5 video.
                                 <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
