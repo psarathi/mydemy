@@ -1,25 +1,25 @@
 import Link from 'next/link';
-import {useSearchParams} from 'next/navigation';
-import React, {useEffect, useState, useRef} from 'react';
+import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import {BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS} from '../constants';
-import {addToHistory} from '../utils/courseTracking';
-import {useSession} from 'next-auth/react';
-import {useCourses} from '../hooks/useCourses';
+import { BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS } from '../constants';
+import { addToHistory } from '../utils/courseTracking';
+import { useSession } from 'next-auth/react';
+import { useCourses } from '../hooks/useCourses';
 
-function CourseName({courseName}) {
+function CourseName({ courseName }) {
     const searchParams = useSearchParams();
     const topic = searchParams.get('topic');
     const lesson = searchParams.get('lesson');
-    const {courses, isLoading} = useCourses();
+    const { courses, isLoading } = useCourses();
     const course = courses.find((c) => c.name === courseName);
-    const {data: session} = useSession();
+    const { data: session } = useSession();
     const videoFileList = course
         ? course.topics.flatMap((t) => {
-              return t.files
-                  .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
-                  .map((f) => getFileName(course, t, f));
-          })
+            return t.files
+                .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
+                .map((f) => getFileName(course, t, f));
+        })
         : [];
     const getVideoFileIndex = (topic, lesson) => {
         let lessonFileName;
@@ -65,10 +65,7 @@ function CourseName({courseName}) {
         if (index > videoFileList.length - 1 || index < 0) {
             index = 0;
         }
-        const filePathParts = videoFileList[index].split('/');
-        return filePathParts.length
-            ? filePathParts[filePathParts.length - 1]
-            : '';
+        return videoFileList[index];
     };
     const [currentVideo, setCurrentVideo] = useState(
         getVideoFileNameAtGivenIndex(currentVideoFileIndex)
@@ -154,7 +151,7 @@ function CourseName({courseName}) {
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                     }} />
-                    <p style={{color: 'var(--text-secondary)', fontSize: '14px'}}>Loading course...</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading course...</p>
                 </div>
             </div>
         );
@@ -170,7 +167,7 @@ function CourseName({courseName}) {
                         </svg>
                     </button>
                 )}
-                
+
                 <aside className={`modern-sidebar ${isSidebarCollapsed ? 'hidden' : ''}`}>
                     <header className='modern-course-header'>
                         <div className='modern-nav-controls'>
@@ -180,8 +177,8 @@ function CourseName({courseName}) {
                                 </svg>
                                 <span>All Courses</span>
                             </Link>
-                            <button 
-                                className='modern-collapse-btn' 
+                            <button
+                                className='modern-collapse-btn'
                                 onClick={collapseSideBar}
                                 aria-label="Collapse sidebar"
                             >
@@ -208,7 +205,7 @@ function CourseName({courseName}) {
                             </span>
                         </div>
                     </header>
-                    
+
                     <div className='modern-content-list'>
                         {course.topics.map((topic, topicIndex) => (
                             <div key={topicIndex} className='modern-topic-section'>
@@ -218,17 +215,16 @@ function CourseName({courseName}) {
                                         {topic.files.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length} lessons
                                     </span>
                                 </div>
-                                
+
                                 <div className='modern-lessons-list'>
                                     {topic.files
                                         .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
                                         .map((file, fileIndex) => (
                                             <div
                                                 key={fileIndex}
-                                                ref={file.fileName === currentVideo ? activeElementRef : null}
-                                                className={`modern-lesson-item ${
-                                                    file.fileName === currentVideo ? 'active' : ''
-                                                }`}
+                                                ref={getFileName(course, topic, file) === currentVideo ? activeElementRef : null}
+                                                className={`modern-lesson-item ${getFileName(course, topic, file) === currentVideo ? 'active' : ''
+                                                    }`}
                                                 onClick={() =>
                                                     playSelectedVideo(
                                                         getFileName(course, topic, file)
@@ -237,7 +233,7 @@ function CourseName({courseName}) {
                                             >
                                                 <div className='lesson-content'>
                                                     <div className='lesson-play-icon'>
-                                                        {file.fileName === currentVideo ? (
+                                                        {getFileName(course, topic, file) === currentVideo ? (
                                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                                 <rect x="6" y="4" width="4" height="16"></rect>
                                                                 <rect x="14" y="4" width="4" height="16"></rect>
@@ -274,7 +270,7 @@ function CourseName({courseName}) {
                         ))}
                     </div>
                 </aside>
-                
+
                 <main className='modern-video-section'>
                     <VideoPlayer
                         videoFile={videoFile}
@@ -307,7 +303,7 @@ function CourseName({courseName}) {
 
 export default CourseName;
 
-export async function getStaticProps({params: {courseName}}) {
+export async function getStaticProps({ params: { courseName } }) {
     const staticExport = process.env.TAURI_BUILD === 'true';
 
     return {
@@ -315,7 +311,7 @@ export async function getStaticProps({params: {courseName}}) {
             courseName,
         },
         // ISR is not compatible with static export
-        ...(staticExport ? {} : {revalidate: 3600 * 24}),
+        ...(staticExport ? {} : { revalidate: 3600 * 24 }),
     };
 }
 
