@@ -46,6 +46,20 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         }
     };
 
+    const skipToNextVideo = () => {
+        const nextVideo = getNextVideo();
+        setCurrentVideo(nextVideo.name);
+        setCurrentSubtitle(nextVideo.subtitles);
+        setShowCountdown(false);
+        setNextVideoInfo(null);
+        setTimeout(() => {
+            if (vp.current) {
+                vp.current.load();
+                vp.current.play();
+            }
+        }, 100);
+    };
+
     const cancelAutoplay = () => {
         setShowCountdown(false);
         setNextVideoInfo(null);
@@ -190,7 +204,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                     </button>
                     <button
                         className='control-btn'
-                        onClick={() => endHandler()}
+                        onClick={skipToNextVideo}
                         aria-label="Next video"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -94,6 +94,19 @@ export const clearCourseTags = (courseName) => {
     }
 };
 
+export const getTagCounts = () => {
+    const allTags = getAllTags();
+    const counts = {};
+    for (const courseName in allTags) {
+        allTags[courseName].forEach(tag => {
+            counts[tag] = (counts[tag] || 0) + 1;
+        });
+    }
+    return Object.entries(counts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count);
+};
+
 export const clearAllTags = () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('courseTags');
