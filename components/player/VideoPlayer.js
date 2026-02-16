@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mpegts from 'mpegts.js';
+
 import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
@@ -150,21 +150,28 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         endHandler(true);
     }, [videoFile, subtitlesFile]);
 
-    // mpegts.js integration for .ts files
+    // mpegts.js integration for .ts files (dynamic import to avoid SSR window error)
     useEffect(() => {
-        if (!vp.current || !currentVideo) return;
+        if (!vp.current || !currentVideo || !currentVideo.endsWith('.ts')) return;
 
-        // Cleanup previous mpegts player
-        if (playerRef.current) {
-            playerRef.current.pause();
-            playerRef.current.unload();
-            playerRef.current.detachMediaElement();
-            playerRef.current.destroy();
-            playerRef.current = null;
-        }
+        let player = null;
+        let cancelled = false;
 
-        if (currentVideo.endsWith('.ts') && mpegts.isSupported()) {
-            const player = mpegts.createPlayer({
+        (async () => {
+            const mpegts = (await import('mpegts.js')).default;
+
+            if (cancelled || !vp.current || !mpegts.isSupported()) return;
+
+            // Cleanup previous mpegts player
+            if (playerRef.current) {
+                playerRef.current.pause();
+                playerRef.current.unload();
+                playerRef.current.detachMediaElement();
+                playerRef.current.destroy();
+                playerRef.current = null;
+            }
+
+            player = mpegts.createPlayer({
                 type: 'mpegts',
                 isLive: false,
                 url: `${BASE_CDN_PATH}/${currentVideo}`,
@@ -177,9 +184,10 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             player.on(mpegts.Events.ERROR, (errorType, errorDetail, errorInfo) => {
                 console.error('mpegts.js error:', errorType, errorDetail, errorInfo);
             });
-        }
+        })();
 
         return () => {
+            cancelled = true;
             if (playerRef.current) {
                 playerRef.current.pause();
                 playerRef.current.unload();
