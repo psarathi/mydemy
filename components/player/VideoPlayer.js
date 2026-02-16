@@ -1,10 +1,12 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {BASE_CDN_PATH, VIDEO_MIME_TYPES} from '../../constants';
+import React, { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
+import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
-function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
+function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const vp = useRef(null);
+    const hlsRef = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
@@ -13,6 +15,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
     const [nextVideoInfo, setNextVideoInfo] = useState(null);
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+    const isTsFile = currentVideo?.endsWith('.ts');
 
     const endHandler = (userSelected = false) => {
         if (userSelected) {
@@ -147,6 +150,44 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
         endHandler(true);
     }, [videoFile, subtitlesFile]);
 
+    // hls.js integration for .ts files
+    useEffect(() => {
+        if (!vp.current || !currentVideo) return;
+
+        // Cleanup previous Hls instance
+        if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
+        }
+
+        if (currentVideo.endsWith('.ts') && Hls.isSupported()) {
+            const hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(`${BASE_CDN_PATH}/${currentVideo}`);
+            hls.attachMedia(vp.current);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                vp.current?.play();
+            });
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error('HLS error:', data);
+                if (data.fatal) {
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        hls.startLoad();
+                    } else {
+                        hls.destroy();
+                    }
+                }
+            });
+        }
+
+        return () => {
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
+        };
+    }, [currentVideo]);
+
     const getVideoDuration = () => {
         if (vp.current.duration) {
             setVideoDuration(
@@ -178,7 +219,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                     <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
                 </div>
                 <div className='video-controls'>
-                    <button 
+                    <button
                         className='control-btn'
                         onClick={() => {
                             if (vp.current.paused) {
@@ -234,7 +275,7 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                     )}
                 </div>
             </div>
-            
+
             <div className='video-player-wrapper'>
                 <div className='video-aspect-container'>
                     {currentVideo ? (
@@ -253,15 +294,18 @@ function VideoPlayer({videoFile, subtitlesFile, getNextVideo}) {
                             controlsList="nodownload"
                             onError={(e) => console.error('Video error:', e)}
                         >
-                            <source
-                                src={`${BASE_CDN_PATH}/${currentVideo}`}
-                                type={(() => {
-                                    const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
-                                    return VIDEO_MIME_TYPES[ext] || 'video/mp4';
-                                })()}
-                            />
+                            {/* For .ts files, hls.js attaches the source directly */}
+                            {!isTsFile && (
+                                <source
+                                    src={`${BASE_CDN_PATH}/${currentVideo}`}
+                                    type={(() => {
+                                        const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
+                                        return VIDEO_MIME_TYPES[ext] || 'video/mp4';
+                                    })()}
+                                />
+                            )}
                             <p className='video-fallback'>
-                                Your browser doesn&apos;t support HTML5 video. 
+                                Your browser doesn&apos;t support HTML5 video.
                                 <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
                             </p>
                         </video>
