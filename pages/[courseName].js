@@ -57,6 +57,7 @@ function CourseName({ courseName }) {
         }
         return false;
     });
+    const [activeTab, setActiveTab] = useState('Overview');
     const activeElementRef = useRef(null);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
@@ -158,8 +159,70 @@ function CourseName({ courseName }) {
     }
 
     return course ? (
-        <div className='modern-course-container'>
+        <div className='modern-course-container reverse-layout'>
             <div className={`modern-course-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                <main className='modern-video-section'>
+                    <VideoPlayer
+                        videoFile={videoFile}
+                        subtitlesFile={subtitlesFile}
+                        getNextVideo={getNextVideo}
+                    />
+
+                    {/* New Tabs Section */}
+                    <div className="course-tabs-section glass-panel">
+                        <div className="tabs-header">
+                            {['Overview', 'Q&A', 'Notes', 'Announcements'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                                    onClick={() => setActiveTab(tab)}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="tab-content">
+                            {activeTab === 'Overview' && (
+                                <div className="tab-pane">
+                                    <h3>About this course</h3>
+                                    <p className="tab-text">Welcome to {courseName}. This course covers everything you need to know about {course.topics.length} topics across {videoFileList.length} comprehensive lessons.</p>
+                                    <div className="instructor-info">
+                                        <div className="instructor-avatar">M</div>
+                                        <div className="instructor-details">
+                                            <span className="instructor-name">Mydemy Instructor</span>
+                                            <span className="instructor-title">Senior Educator</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {activeTab === 'Q&A' && (
+                                <div className="tab-pane">
+                                    <h3>Questions and Answers</h3>
+                                    <p className="tab-text placeholder-text">No questions asked yet. Be the first to start a discussion!</p>
+                                    <button className="ask-btn">Ask a Question</button>
+                                </div>
+                            )}
+                            {activeTab === 'Notes' && (
+                                <div className="tab-pane">
+                                    <h3>Your Notes</h3>
+                                    <div className="notes-input-area">
+                                        <textarea placeholder={`Create a new note at ${getVideoFileNameAtGivenIndex(currentVideoFileIndex)}...`} className="note-input"></textarea>
+                                        <div className="note-actions">
+                                            <button className="save-note-btn">Save Note</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {activeTab === 'Announcements' && (
+                                <div className="tab-pane">
+                                    <h3>Announcements</h3>
+                                    <p className="tab-text placeholder-text">No recent announcements from the instructor.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </main>
+
                 {isSidebarCollapsed && (
                     <button className='modern-open-sidebar-btn' onClick={openSidebar} aria-label="Open sidebar">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -270,14 +333,6 @@ function CourseName({ courseName }) {
                         ))}
                     </div>
                 </aside>
-
-                <main className='modern-video-section'>
-                    <VideoPlayer
-                        videoFile={videoFile}
-                        subtitlesFile={subtitlesFile}
-                        getNextVideo={getNextVideo}
-                    />
-                </main>
             </div>
         </div>
     ) : (

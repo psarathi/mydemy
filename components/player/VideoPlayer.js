@@ -174,69 +174,8 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
             />
-            <div className='video-header'>
-                <div className='video-info'>
-                    <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
-                </div>
-                <div className='video-controls'>
-                    <button
-                        className='control-btn'
-                        onClick={() => {
-                            if (vp.current.paused) {
-                                vp.current.play();
-                                setIsPlaying(true);
-                            } else {
-                                vp.current.pause();
-                                setIsPlaying(false);
-                            }
-                        }}
-                        aria-label="Toggle play/pause"
-                    >
-                        {isPlaying ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="6" y="4" width="4" height="16"></rect>
-                                <rect x="14" y="4" width="4" height="16"></rect>
-                            </svg>
-                        ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                            </svg>
-                        )}
-                    </button>
-                    <button
-                        className='control-btn'
-                        onClick={skipToNextVideo}
-                        aria-label="Next video"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                            <line x1="19" y1="5" x2="19" y2="19"></line>
-                        </svg>
-                    </button>
-                    <button
-                        className='control-btn'
-                        onClick={() => setShowSettings(true)}
-                        aria-label="Video settings"
-                        title="Video settings"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path>
-                        </svg>
-                    </button>
-                    {videoDuration && (
-                        <span className='video-duration'>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12,6 12,12 16,14"></polyline>
-                            </svg>
-                            {videoDuration}
-                        </span>
-                    )}
-                </div>
-            </div>
 
-            <div className='video-player-wrapper'>
+            <div className='video-player-wrapper glass-panel'>
                 <div className='video-aspect-container'>
                     {currentVideo ? (
                         <video
@@ -277,6 +216,69 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             </div>
                         </div>
                     )}
+                </div>
+
+                <div className='video-controls-bar'>
+                    <div className='video-info-overlay'>
+                        <h2 className='video-title-overlay'>{getVideoName() || 'Select a lesson to start watching'}</h2>
+                        {videoDuration && (
+                            <span className='video-duration-overlay'>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                                {videoDuration}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className='video-actions-overlay'>
+                        <button
+                            className='control-action-btn'
+                            onClick={() => {
+                                if (vp.current.paused) {
+                                    vp.current.play();
+                                    setIsPlaying(true);
+                                } else {
+                                    vp.current.pause();
+                                    setIsPlaying(false);
+                                }
+                            }}
+                            aria-label="Toggle play/pause"
+                        >
+                            {isPlaying ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="6" y="4" width="4" height="16"></rect>
+                                    <rect x="14" y="4" width="4" height="16"></rect>
+                                </svg>
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                            )}
+                        </button>
+                        <button
+                            className='control-action-btn'
+                            onClick={skipToNextVideo}
+                            aria-label="Next video"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                                <line x1="19" y1="5" x2="19" y2="19"></line>
+                            </svg>
+                        </button>
+                        <button
+                            className='control-action-btn settings-btn'
+                            onClick={() => setShowSettings(true)}
+                            aria-label="Video settings"
+                            title="Video settings"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

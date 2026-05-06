@@ -1,18 +1,18 @@
 // 'use client';
 import Link from 'next/link';
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import SwitchCheckbox from '../common/SwitchCheckbox';
 import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
-import {addToHistory} from '../../utils/courseTracking';
-import {addTag, removeTag, getTags, getTagCounts} from '../../utils/tagging';
-import {useSession} from 'next-auth/react';
-import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
-import {useCourses} from '../../hooks/useCourses';
+import { addToHistory } from '../../utils/courseTracking';
+import { addTag, removeTag, getTags, getTagCounts } from '../../utils/tagging';
+import { useSession } from 'next-auth/react';
+import { SUPPORTED_VIDEO_EXTENSIONS } from '../../constants';
+import { useCourses } from '../../hooks/useCourses';
 
-function Landing({search_term = '', exact, refreshCoursesRef}) {
+function Landing({ search_term = '', exact, refreshCoursesRef }) {
     exact = exact?.toLowerCase() === 'true';
 
     // Load preserved search term from localStorage if no URL param provided
@@ -37,8 +37,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
     const searchField = useRef(null);
     const autocompleteRef = useRef(null);
-    const {data: session} = useSession();
-    const {courses, isLoading, mutate} = useCourses();
+    const { data: session } = useSession();
+    const { courses, isLoading, mutate } = useCourses();
 
     // Expose refresh function to parent
     useEffect(() => {
@@ -57,6 +57,21 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             }
         }
     }, [searchTerm]);
+
+    const [recentHistory, setRecentHistory] = useState([]);
+
+    useEffect(() => {
+        // Load history data for Continue Watching section
+        const history = JSON.parse(localStorage.getItem('courseHistory') || '[]');
+        setRecentHistory(history);
+
+        const handleHistoryUpdate = (event) => {
+            setRecentHistory(event.detail.history);
+        };
+
+        window.addEventListener('courseHistoryUpdated', handleHistoryUpdate);
+        return () => window.removeEventListener('courseHistoryUpdated', handleHistoryUpdate);
+    }, []);
 
     // Load and refresh tag counts
     useEffect(() => {
@@ -132,11 +147,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             filtered = filtered.filter(c => {
                 const courseNameMatch = !exactSearch
                     ? searchTermParts.some(
-                          (p) => c.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
-                      )
+                        (p) => c.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
+                    )
                     : searchTermParts.every((p) =>
-                          c.name.toLowerCase().split(' ').includes(p.toLowerCase())
-                      );
+                        c.name.toLowerCase().split(' ').includes(p.toLowerCase())
+                    );
 
                 // If searching in lessons, also check lesson names
                 if (searchInLessons && !courseNameMatch) {
@@ -144,11 +159,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                         topic.files?.some((file) =>
                             !exactSearch
                                 ? searchTermParts.some(
-                                      (p) => file.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
-                                  )
+                                    (p) => file.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
+                                )
                                 : searchTermParts.every((p) =>
-                                      file.name.toLowerCase().split(' ').includes(p.toLowerCase())
-                                  )
+                                    file.name.toLowerCase().split(' ').includes(p.toLowerCase())
+                                )
                         )
                     );
                     return hasMatchingLesson;
@@ -310,7 +325,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                     }} />
-                    <p style={{color: 'var(--text-secondary)', fontSize: '14px'}}>Loading courses...</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading courses...</p>
                 </div>
             </div>
         );
@@ -318,329 +333,404 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
 
     return (
         <div className='modern-landing-container'>
-            <HamburgerMenu />
-            <header className='landing-header'>
-                <div className='header-content'>
-                    <div className='brand-section'>
-                        <h1 className='brand-title'>
-                            <span className='brand-icon'>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                </svg>
-                            </span>
-                            Mydemy
-                            {session && (
-                                <span className='logged-in-indicator' title={`Signed in as ${session.user.name}`}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M20 6L9 17l-5-5"></path>
-                                    </svg>
-                                </span>
-                            )}
-                        </h1>
-                        <p className='brand-subtitle'>
-                            Your personal learning platform
-                            {session && (
-                                <span className='welcome-text'> • Welcome back, {session.user.name?.split(' ')[0]}!</span>
-                            )}
-                        </p>
-                    </div>
-                    <div className='header-actions'>
-                        <ThemeToggle />
-                    </div>
-                </div>
-            </header>
-            <div className='courses-section'>
-                <div className='search-section'>
-                    <div className='search-bar'>
-                        <svg className='search-icon' width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                        <input
-                            ref={searchField}
-                            autoFocus
-                            type='text'
-                            className='modern-search-input'
-                            placeholder='Search courses... (type # to filter by tag)'
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={handleSearchKeyDown}
-                        />
-                        {searchTerm && (
-                            <button
-                                className='search-clear-btn'
-                                onClick={clearSearch}
-                                aria-label='Clear search'
-                                type='button'
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        )}
-                        {showAutocomplete && (
-                            <div className='tag-autocomplete' ref={autocompleteRef}>
-                                {autocompleteResults.map((item, i) => (
-                                    <div
-                                        key={item.tag}
-                                        className={`tag-autocomplete-item ${i === autocompleteIndex ? 'active' : ''}`}
-                                        onClick={() => selectAutocompleteTag(item.tag)}
-                                        onMouseEnter={() => setAutocompleteIndex(i)}
-                                    >
-                                        <span className='tag-autocomplete-name'>#{item.tag}</span>
-                                        <span className='tag-autocomplete-count'>{item.count} {item.count === 1 ? 'course' : 'courses'}</span>
-                                    </div>
-                                ))}
-                                {autocompleteResults.length === 0 && searchTerm.length > 1 && (
-                                    <div className='tag-autocomplete-empty'>No matching tags</div>
+            <div className='sidebar-wrapper'>
+                <HamburgerMenu />
+            </div>
+
+            <div className='main-content-area'>
+                <header className='landing-header'>
+                    <div className='header-content'>
+                        <div className='brand-section mobile-only'>
+                            <h1 className='brand-title'>
+                                Mydemy
+                                {session && (
+                                    <span className='logged-in-indicator' title={`Signed in as ${session.user.name}`}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M20 6L9 17l-5-5"></path>
+                                        </svg>
+                                    </span>
                                 )}
-                            </div>
-                        )}
+                            </h1>
+                        </div>
+                        <div className='welcome-section desktop-only'>
+                            {session ? (
+                                <h2>Welcome back, {session.user.name?.split(' ')[0]}!</h2>
+                            ) : (
+                                <h2>Your personal learning platform</h2>
+                            )}
+                            <p className='brand-subtitle'>Ready to master your future?</p>
+                        </div>
+                        <div className='header-actions'>
+                            <ThemeToggle />
+                        </div>
                     </div>
-                    <div className='search-controls'>
-                        <label className='exact-search-toggle'>
-                            <SwitchCheckbox
-                                initialState={exactSearch}
-                                callback={setExactSearch}
+                </header>
+                <div className='courses-section'>
+                    <div className='search-section'>
+                        <div className='search-bar'>
+                            <svg className='search-icon' width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input
+                                ref={searchField}
+                                autoFocus
+                                type='text'
+                                className='modern-search-input'
+                                placeholder='Search courses... (type # to filter by tag)'
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={handleSearchKeyDown}
                             />
-                            <span className='toggle-label'>Exact match</span>
-                        </label>
-                        <label className='exact-search-toggle'>
-                            <SwitchCheckbox
-                                initialState={searchInLessons}
-                                callback={setSearchInLessons}
-                            />
-                            <span className='toggle-label'>Search in lessons</span>
-                        </label>
+                            {searchTerm && (
+                                <button
+                                    className='search-clear-btn'
+                                    onClick={clearSearch}
+                                    aria-label='Clear search'
+                                    type='button'
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            )}
+                            {showAutocomplete && (
+                                <div className='tag-autocomplete' ref={autocompleteRef}>
+                                    {autocompleteResults.map((item, i) => (
+                                        <div
+                                            key={item.tag}
+                                            className={`tag-autocomplete-item ${i === autocompleteIndex ? 'active' : ''}`}
+                                            onClick={() => selectAutocompleteTag(item.tag)}
+                                            onMouseEnter={() => setAutocompleteIndex(i)}
+                                        >
+                                            <span className='tag-autocomplete-name'>#{item.tag}</span>
+                                            <span className='tag-autocomplete-count'>{item.count} {item.count === 1 ? 'course' : 'courses'}</span>
+                                        </div>
+                                    ))}
+                                    {autocompleteResults.length === 0 && searchTerm.length > 1 && (
+                                        <div className='tag-autocomplete-empty'>No matching tags</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className='search-controls'>
+                            <label className='exact-search-toggle'>
+                                <SwitchCheckbox
+                                    initialState={exactSearch}
+                                    callback={setExactSearch}
+                                />
+                                <span className='toggle-label'>Exact match</span>
+                            </label>
+                            <label className='exact-search-toggle'>
+                                <SwitchCheckbox
+                                    initialState={searchInLessons}
+                                    callback={setSearchInLessons}
+                                />
+                                <span className='toggle-label'>Search in lessons</span>
+                            </label>
+                        </div>
                     </div>
-                </div>
 
-                {allTagCounts.length > 0 && (
-                    <div className='tag-filter-bar'>
-                        <button
-                            className='tag-filter-mode-btn'
-                            onClick={() => setTagFilterMode(prev => prev === 'OR' ? 'AND' : 'OR')}
-                            title={tagFilterMode === 'OR' ? 'Showing courses with ANY selected tag' : 'Showing courses with ALL selected tags'}
-                        >
-                            {tagFilterMode}
-                        </button>
-                        {allTagCounts.map(({tag, count}) => (
+                    {/* Featured Hero Section */}
+                    <div className="hero-section">
+                        <span className="hero-label">Course</span>
+                        <h2>Creative Coding for Beginners</h2>
+                        <p>Learn how it uses a loss your course.</p>
+                        <button className="hero-btn">Learn more</button>
+                    </div>
+
+                    {/* Dashboard Stats Section */}
+                    <div className="dashboard-stats-section">
+                        <h2 className="section-title">Personalized Dashboard</h2>
+                        <div className="dashboard-cards">
+                            <div className="dashboard-card progress-card">
+                                <h4 className="card-title">Weekly Progress</h4>
+                                <div className="progress-circle">
+                                    <svg viewBox="0 0 36 36" className="circular-chart">
+                                        <path className="circle-bg"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                        <path className="circle"
+                                            strokeDasharray="75, 100"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                    </svg>
+                                    <div className="progress-text">
+                                        <span className="progress-number">400</span>
+                                        <span className="progress-label">Progress</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="dashboard-card deadlines-card">
+                                <h4 className="card-title">Upcoming Deadlines</h4>
+                                <div className="calendar-row">
+                                    <div className="cal-day"><span className="day-name">Mon</span><span className="day-date">06</span><span className="day-month">Jun</span></div>
+                                    <div className="cal-day active"><span className="day-name">Tue</span><span className="day-date">16</span><span className="day-month">Oct</span></div>
+                                    <div className="cal-day"><span className="day-name">Wed</span><span className="day-date">22</span><span className="day-month">Aug</span></div>
+                                </div>
+                                <div className="upcoming-info">
+                                    <h5>Upcoming Deadline</h5>
+                                    <span>Designated in 3 days</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {allTagCounts.length > 0 && (
+                        <div className='tag-filter-bar'>
                             <button
-                                key={tag}
-                                className={`tag-filter-pill ${activeTags.includes(tag) ? 'active' : ''}`}
-                                onClick={() => toggleTag(tag)}
+                                className='tag-filter-mode-btn'
+                                onClick={() => setTagFilterMode(prev => prev === 'OR' ? 'AND' : 'OR')}
+                                title={tagFilterMode === 'OR' ? 'Showing courses with ANY selected tag' : 'Showing courses with ALL selected tags'}
                             >
-                                <span>#{tag}</span>
-                                <span className='tag-filter-pill-count'>{count}</span>
+                                {tagFilterMode}
                             </button>
-                        ))}
-                        {activeTags.length > 0 && (
-                            <button className='tag-filter-clear' onClick={clearActiveTags}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                                Clear
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                <div className='courses-header'>
-                    <div>
-                        <h1>Courses</h1>
-                        <span className='course-count'>{courseList.length} available</span>
-                    </div>
-                    {courseList.length > 0 && (
-                        <div className='bulk-tag-container'>
-                            <div className='bulk-tag-section'>
-                                <input
-                                    type="text"
-                                    className="bulk-tag-input bulk-tag-add"
-                                    placeholder="Add tag to all..."
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && e.target.value.trim()) {
-                                            handleBulkAddTag(e.target.value);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                />
-                                <span className='bulk-tag-hint'>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                            {allTagCounts.map(({ tag, count }) => (
+                                <button
+                                    key={tag}
+                                    className={`tag-filter-pill ${activeTags.includes(tag) ? 'active' : ''}`}
+                                    onClick={() => toggleTag(tag)}
+                                >
+                                    <span>#{tag}</span>
+                                    <span className='tag-filter-pill-count'>{count}</span>
+                                </button>
+                            ))}
+                            {activeTags.length > 0 && (
+                                <button className='tag-filter-clear' onClick={clearActiveTags}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
                                     </svg>
-                                    Add to all
-                                </span>
-                            </div>
-                            <div className='bulk-tag-divider'></div>
-                            <div className='bulk-tag-section'>
-                                <input
-                                    type="text"
-                                    className="bulk-tag-input bulk-tag-remove"
-                                    placeholder="Remove tag from all..."
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && e.target.value.trim()) {
-                                            handleBulkRemoveTag(e.target.value);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                />
-                                <span className='bulk-tag-hint bulk-tag-hint-remove'>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                    Remove from all
-                                </span>
-                            </div>
-                            <span className='bulk-tag-count'>{courseList.length} {courseList.length === 1 ? 'course' : 'courses'}</span>
+                                    Clear
+                                </button>
+                            )}
                         </div>
                     )}
-                </div>
-                
-                <div className='courses-grid'>
-                    {courseList.map((course, i) => (
-                        <div
-                            key={i}
-                            className='course-card'
-                            onMouseEnter={(event) => showCourseDetails(event, course)}
-                        >
-                            <div className='course-card-content'>
-                                <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
-                                    <h3 className='course-title'>{course.name}</h3>
-                                </Link>
-                                <div className='course-stats'>
-                                    <span className='stat'>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+
+                    <div className='courses-header'>
+                        <div>
+                            <h1>Courses</h1>
+                            <span className='course-count'>{courseList.length} available</span>
+                        </div>
+                        {courseList.length > 0 && (
+                            <div className='bulk-tag-container'>
+                                <div className='bulk-tag-section'>
+                                    <input
+                                        type="text"
+                                        className="bulk-tag-input bulk-tag-add"
+                                        placeholder="Add tag to all..."
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                handleBulkAddTag(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                    <span className='bulk-tag-hint'>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
                                         </svg>
-                                        {course.topics?.length || 0} topics
-                                    </span>
-                                    <span className='stat'>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                        </svg>
-                                        {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
+                                        Add to all
                                     </span>
                                 </div>
-                                <div className='course-tags'>
-                                    {getTags(course.name).map(tag => (
-                                        <TagButton key={tag} course={course} tag={tag} />
+                                <div className='bulk-tag-divider'></div>
+                                <div className='bulk-tag-section'>
+                                    <input
+                                        type="text"
+                                        className="bulk-tag-input bulk-tag-remove"
+                                        placeholder="Remove tag from all..."
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                handleBulkRemoveTag(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                    <span className='bulk-tag-hint bulk-tag-hint-remove'>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                        Remove from all
+                                    </span>
+                                </div>
+                                <span className='bulk-tag-count'>{courseList.length} {courseList.length === 1 ? 'course' : 'courses'}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className='courses-grid'>
+                        {/* Continue Watching Section (only render if there's history and not actively searching) */}
+                        {recentHistory.length > 0 && !searchTerm && activeTags.length === 0 && (
+                            <div style={{ gridColumn: '1 / -1', marginBottom: '16px' }}>
+                                <div className="continue-watching-section">
+                                    <h2 className="section-title">Continue Watching</h2>
+                                    <Link
+                                        href={`/${recentHistory[0].name}`}
+                                        className="cw-card"
+                                        onClick={(e) => {
+                                            if (e.target.closest('.cw-play-icon')) {
+                                                // Handle direct play click if needed
+                                            }
+                                            handleCourseClick(recentHistory[0]);
+                                        }}
+                                    >
+                                        <div className="cw-thumbnail">
+                                            <div className="cw-play-icon">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <div className="cw-details">
+                                            <h3 className="cw-course-title">{recentHistory[0].name}</h3>
+                                            <p className="cw-lesson-title">Resume your learning journey</p>
+                                            <div className="cw-progress-bar">
+                                                {/* Example visual progress, could map to real view duration in future */}
+                                                <div className="cw-progress-fill" style={{ width: '35%' }}></div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
+                        {courseList.map((course, i) => (
+                            <div
+                                key={i}
+                                className='course-card'
+                                onMouseEnter={(event) => showCourseDetails(event, course)}
+                            >
+                                <div className='course-card-content'>
+                                    <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
+                                        <h3 className='course-title'>{course.name}</h3>
+                                    </Link>
+                                    <div className='course-stats'>
+                                        <span className='stat'>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                            </svg>
+                                            {course.topics?.length || 0} topics
+                                        </span>
+                                        <span className='stat'>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                            </svg>
+                                            {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
+                                        </span>
+                                    </div>
+                                    <div className='course-tags'>
+                                        {getTags(course.name).map(tag => (
+                                            <TagButton key={tag} course={course} tag={tag} />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className='course-card-actions'>
+                                    <div className='action-buttons-group'>
+                                        <FavoriteButton course={course} />
+                                        <button
+                                            className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
+                                            aria-label={`Preview ${course.name}`}
+                                            onClick={(e) => handlePreviewTap(e, course)}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <Link href={`/${course.name}`} className='enroll-btn' onClick={() => handleCourseClick(course)}>
+                                        Enroll Now
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {mobilePreviewOpen && <div className='mobile-preview-overlay' onClick={closeMobilePreview} />}
+                <div className={`preview-section ${mobilePreviewOpen ? 'mobile-open' : ''}`}>
+                    {previewCourse?.name ? (
+                        <>
+                            <div className='preview-header'>
+                                <button className='mobile-preview-close' onClick={closeMobilePreview} aria-label="Close preview">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                                <h2>{previewCourse.name}</h2>
+                                <div className='preview-stats'>
+                                    <div className='stat-badge'>
+                                        <span className='stat-number'>{previewCourse?.topics?.length || 0}</span>
+                                        <span className='stat-label'>Topics</span>
+                                    </div>
+                                    <div className='stat-badge'>
+                                        <span className='stat-number'>
+                                            {previewCourse?.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0}
+                                        </span>
+                                        <span className='stat-label'>Lessons</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className='preview-content'>
+                                <div className='topics-list'>
+                                    {previewCourse?.topics?.map((topic, i) => (
+                                        <div key={i} className='topic-section'>
+                                            <div className='topic-header'>
+                                                <Link
+                                                    href={{
+                                                        pathname: previewCourse.name,
+                                                        query: { topic: topic.name },
+                                                    }}
+                                                    className='topic-link'
+                                                >
+                                                    <h4>{topic.name}</h4>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                                    </svg>
+                                                </Link>
+                                            </div>
+                                            <div className='lessons-list'>
+                                                {topic.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).map((f, j) => (
+                                                    <Link
+                                                        key={j}
+                                                        href={{
+                                                            pathname: previewCourse.name,
+                                                            query: {
+                                                                topic: topic.name,
+                                                                lesson: f.name,
+                                                            },
+                                                        }}
+                                                        className='lesson-link'
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                        </svg>
+                                                        <span>{f.name}</span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className='course-card-actions'>
-                                <FavoriteButton course={course} />
-                                <input
-                                    type="text"
-                                    className="tag-input"
-                                    placeholder="Add tag"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            addTag(course, e.target.value);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                />
-                                <button
-                                    className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
-                                    aria-label={`Preview ${course.name}`}
-                                    onClick={(e) => handlePreviewTap(e, course)}
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
-                                </button>
-                            </div>
+                        </>
+                    ) : (
+                        <div className='preview-placeholder'>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <h3>Preview a Course</h3>
+                            <p>Hover over a course card to see its topics and lessons</p>
                         </div>
-                    ))}
+                    )}
                 </div>
-            </div>
-            
-            {mobilePreviewOpen && <div className='mobile-preview-overlay' onClick={closeMobilePreview} />}
-            <div className={`preview-section ${mobilePreviewOpen ? 'mobile-open' : ''}`}>
-                {previewCourse?.name ? (
-                    <>
-                        <div className='preview-header'>
-                            <button className='mobile-preview-close' onClick={closeMobilePreview} aria-label="Close preview">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                            <h2>{previewCourse.name}</h2>
-                            <div className='preview-stats'>
-                                <div className='stat-badge'>
-                                    <span className='stat-number'>{previewCourse?.topics?.length || 0}</span>
-                                    <span className='stat-label'>Topics</span>
-                                </div>
-                                <div className='stat-badge'>
-                                    <span className='stat-number'>
-                                        {previewCourse?.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0}
-                                    </span>
-                                    <span className='stat-label'>Lessons</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className='preview-content'>
-                            <div className='topics-list'>
-                                {previewCourse?.topics?.map((topic, i) => (
-                                    <div key={i} className='topic-section'>
-                                        <div className='topic-header'>
-                                            <Link
-                                                href={{
-                                                    pathname: previewCourse.name,
-                                                    query: { topic: topic.name },
-                                                }}
-                                                className='topic-link'
-                                            >
-                                                <h4>{topic.name}</h4>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                                </svg>
-                                            </Link>
-                                        </div>
-                                        <div className='lessons-list'>
-                                            {topic.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).map((f, j) => (
-                                                <Link
-                                                    key={j}
-                                                    href={{
-                                                        pathname: previewCourse.name,
-                                                        query: {
-                                                            topic: topic.name,
-                                                            lesson: f.name,
-                                                        },
-                                                    }}
-                                                    className='lesson-link'
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                                    </svg>
-                                                    <span>{f.name}</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className='preview-placeholder'>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <h3>Preview a Course</h3>
-                        <p>Hover over a course card to see its topics and lessons</p>
-                    </div>
-                )}
             </div>
         </div>
     );
