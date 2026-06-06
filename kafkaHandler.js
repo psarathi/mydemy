@@ -1,5 +1,7 @@
 const {Kafka} = require('kafkajs');
 const EventEmitter = require('node:events');
+const path = require('node:path');
+const {spawn} = require('node:child_process');
 const fetchCourses = require('./fetchCourses');
 const {
     KAFKA_SERVER,
@@ -27,6 +29,36 @@ if (!global.kafkaConsumerRunning) {
 
 const kafka = global.kafkaClient;
 const kafkaEmitter = global.kafkaEmitter;
+
+/**
+ * Push the freshly-updated courses.json to the CDN so the redundant copy
+ * (used by the desktop app and as a fallback) stays in sync with the local
+ * file the web app serves. Runs in a separate process so a failed/unconfigured
+ * upload only logs — it never crashes the long-running server. No-op unless an
+ * upload endpoint is configured.
+ */
+const uploadCoursesToCDN = () => {
+    if (!process.env.COURSES_UPLOAD_ENDPOINT) {
+        console.log('[Kafka] COURSES_UPLOAD_ENDPOINT not set; skipping CDN sync');
+        return;
+    }
+
+    console.log('[Kafka] Syncing courses.json to CDN...');
+    const child = spawn('node', [path.join(__dirname, 'uploadCoursesToCDN.js')], {
+        cwd: __dirname,
+        stdio: 'inherit',
+    });
+    child.on('error', (err) => {
+        console.error('[Kafka] Failed to start CDN sync:', err.message);
+    });
+    child.on('exit', (code) => {
+        if (code === 0) {
+            console.log('[Kafka] CDN sync complete');
+        } else {
+            console.error(`[Kafka] CDN sync exited with code ${code} (local file is still updated)`);
+        }
+    });
+};
 
 const runConsumer = async () => {
     if (global.kafkaConsumerRunning) {
@@ -57,6 +89,8 @@ const runConsumer = async () => {
             if (msg_json[KAFKA_UPLOAD_MSG]?.length) {
                 console.log('[Kafka] Processing message, courses to add:', msg_json[KAFKA_UPLOAD_MSG]);
                 await fetchCourses(msg_json[KAFKA_UPLOAD_MSG]);
+                // Keep the CDN's redundant copy in sync with the freshly appended local file.
+                uploadCoursesToCDN();
                 console.log('[Kafka] Emitting message to clients');
                 kafkaEmitter.emit('message', msg);
                 console.log('[Kafka] Message emitted, active listeners:', kafkaEmitter.listenerCount('message'));
