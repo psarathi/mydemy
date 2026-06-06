@@ -316,8 +316,16 @@ export async function getStaticProps({ params: { courseName } }) {
 }
 
 export async function getStaticPaths() {
-    // Import courses for build-time static generation only
-    const courses = require('../courses.json');
+    // Import courses for build-time static generation only.
+    // courses.json is not tracked in git and may be absent on a fresh
+    // checkout; fall back to an empty list so the build never hard-fails
+    // (fallback: true generates pages on demand at runtime).
+    let courses = [];
+    try {
+        courses = require('../courses.json');
+    } catch (err) {
+        console.warn('courses.json not found at build time; generating paths on demand');
+    }
     return {
         paths: courses.map((c) => ({
             params: {

@@ -21,6 +21,16 @@ if [ "$PROCESS_COURSES" = true ]; then
     echo "✅ Courses processed and copied"
 fi
 
+# courses.json is no longer tracked in git, so it persists across deploys.
+# Guard against a fresh checkout where it doesn't exist yet: the build
+# (getStaticPaths) requires the file to be present. An empty list is a safe
+# placeholder until a --with-courses run populates it.
+if [ ! -f courses.json ]; then
+    echo "⚠️  courses.json missing — creating empty placeholder (run with --with-courses to populate)"
+    echo "[]" > courses.json
+fi
+cp courses.json public/courses.json
+
 echo "🔨 Building the project..."
 npx next build
 echo "✅ Build complete — handing off to myharness for quality gates."
