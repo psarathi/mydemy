@@ -25,7 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // Load environment variables
 require('dotenv').config({ path: '.env.local' });
@@ -39,12 +39,59 @@ const UPLOAD_KEY = process.env.COURSES_UPLOAD_KEY;
 const UPLOAD_AUTH = process.env.COURSES_UPLOAD_AUTH;
 
 /**
+ * Resolve the SCP endpoint into { sshTarget, remoteFile } where remoteFile is
+ * the absolute path of the live courses.json on the CDN host. The endpoint may
+ * be a directory (trailing slash) or a full file path, and may contain
+ * shell-escaped spaces (e.g. "Seagate\ Backup\ Plus\ Drive"); we unescape those
+ * so the path can be safely re-quoted for the remote shell.
+ */
+function resolveScpTarget() {
+    const colonIdx = UPLOAD_ENDPOINT.indexOf(':');
+    if (colonIdx === -1) {
+        throw new Error(`COURSES_UPLOAD_ENDPOINT must be of the form user@host:/path (got "${UPLOAD_ENDPOINT}")`);
+    }
+    const sshTarget = UPLOAD_ENDPOINT.slice(0, colonIdx);
+    const rawPath = UPLOAD_ENDPOINT.slice(colonIdx + 1).replace(/\\(.)/g, '$1');
+    const remoteFile = rawPath.endsWith('/') ? `${rawPath}courses.json` : rawPath;
+    return { sshTarget, remoteFile };
+}
+
+/**
+ * Before overwriting the CDN's courses.json, copy the current one to
+ * courses.json.bak so a bad/empty upload can be rolled back. Uses cp (not mv)
+ * so the live file is never missing, and is a no-op on the very first upload.
+ * A backup failure is logged but never blocks the upload of a good file.
+ */
+function backupRemoteCourses({ sshTarget, remoteFile }) {
+    const remoteBackup = `${remoteFile}.bak`;
+    const remoteCmd =
+        `if [ -f '${remoteFile}' ]; then ` +
+        `cp -f '${remoteFile}' '${remoteBackup}' && ` +
+        `echo "🛟 Backed up previous courses.json -> ${remoteBackup}"; ` +
+        `else echo "ℹ️  No existing CDN courses.json to back up (first upload)"; fi`;
+
+    const sshArgs = [];
+    if (UPLOAD_KEY) sshArgs.push('-i', UPLOAD_KEY);
+    sshArgs.push(sshTarget, remoteCmd);
+
+    try {
+        execFileSync('ssh', sshArgs, { stdio: 'inherit' });
+    } catch (error) {
+        console.warn(`⚠️  Could not back up the existing CDN courses.json: ${error.message}`);
+        console.warn('   Proceeding with the upload anyway.');
+    }
+}
+
+/**
  * Upload via SCP (SSH File Transfer)
  */
 async function uploadViaSCP() {
     if (!UPLOAD_ENDPOINT) {
         throw new Error('COURSES_UPLOAD_ENDPOINT not configured (e.g., user@server:/var/www/courses.json)');
     }
+
+    // Keep the previous CDN copy as a rollback before we overwrite it.
+    backupRemoteCourses(resolveScpTarget());
 
     console.log(`📤 Uploading courses.json to ${UPLOAD_ENDPOINT} via SCP...`);
 
