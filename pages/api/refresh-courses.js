@@ -1,8 +1,6 @@
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from './auth/[...nextauth]';
 
 /**
  * Re-process the course catalog on demand from the UI.
@@ -15,7 +13,7 @@ import { authOptions } from './auth/[...nextauth]';
  *   3. uploadCoursesToCDN.js   — back up the CDN copy, then upload the new one
  *
  * The scan can take a few minutes, so the request is held open until it
- * finishes. Gated to signed-in users and guarded against concurrent runs.
+ * finishes. Guarded against concurrent runs.
  */
 function runNodeScript(script, cwd) {
     return new Promise((resolve, reject) => {
@@ -47,11 +45,6 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const session = await getServerSession(req, res, authOptions);
-    if (!session) {
-        return res.status(401).json({ error: 'Please sign in to refresh courses.' });
-    }
-
     if (global.coursesRefreshInProgress) {
         return res.status(409).json({ error: 'A course refresh is already running. Please wait for it to finish.' });
     }
@@ -62,7 +55,7 @@ export default async function handler(req, res) {
     req.socket?.setTimeout(0);
 
     const root = process.cwd();
-    console.log(`[refresh-courses] Started by ${session.user?.email || 'unknown user'}`);
+    console.log('[refresh-courses] Started');
 
     try {
         await runNodeScript('fetchCoursesScript.js', root);
