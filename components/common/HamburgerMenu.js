@@ -11,6 +11,9 @@ export default function HamburgerMenu() {
     const [viewHistory, setViewHistory] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [uniqueTags, setUniqueTags] = useState([]);
+    // 'idle' | 'loading' | 'done' | 'error'
+    const [refreshState, setRefreshState] = useState('idle');
+    const [refreshError, setRefreshError] = useState('');
     const {data: session} = useSession();
 
     useEffect(() => {
@@ -73,6 +76,31 @@ export default function HamburgerMenu() {
         setIsOpen(false);
     };
 
+    const handleRefreshCourses = async () => {
+        // Once done, the button doubles as a "reload the page" action.
+        if (refreshState === 'done') {
+            window.location.reload();
+            return;
+        }
+        if (refreshState === 'loading') {
+            return;
+        }
+
+        setRefreshState('loading');
+        setRefreshError('');
+        try {
+            const res = await fetch('/api/refresh-courses', {method: 'POST'});
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Refresh failed (${res.status})`);
+            }
+            setRefreshState('done');
+        } catch (err) {
+            setRefreshError(err.message || 'Something went wrong');
+            setRefreshState('error');
+        }
+    };
+
     return (
         <>
             {/* Hamburger Button */}
@@ -115,6 +143,41 @@ export default function HamburgerMenu() {
                         <div className="auth-section">
                             <AuthButton />
                         </div>
+                    </div>
+
+                    {/* Refresh Courses Section */}
+                    <div className="menu-section">
+                        <button
+                            className={`refresh-courses-btn ${refreshState}`}
+                            onClick={handleRefreshCourses}
+                            disabled={refreshState === 'loading'}
+                        >
+                            {refreshState === 'loading' ? (
+                                <span className="refresh-spinner" aria-hidden="true"></span>
+                            ) : refreshState === 'done' ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                </svg>
+                            )}
+                            <span>
+                                {refreshState === 'loading' && 'Refreshing… this may take a few minutes'}
+                                {refreshState === 'done' && 'Done — reload the page'}
+                                {refreshState === 'error' && 'Retry refresh'}
+                                {refreshState === 'idle' && 'Refresh Courses'}
+                            </span>
+                        </button>
+                        {refreshState === 'done' && (
+                            <p className="refresh-note">New courses are ready. Reload to see them.</p>
+                        )}
+                        {refreshState === 'error' && (
+                            <p className="refresh-note error">{refreshError}</p>
+                        )}
                     </div>
 
                     {/* Favorites Section */}
