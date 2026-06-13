@@ -14,6 +14,19 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
 
+    // Mobile browsers reject play() when autoplay-with-audio is blocked
+    // (NotAllowedError). Swallow that rejection so it doesn't surface as an
+    // uncaught promise error; the native controls let the user start playback.
+    const safePlay = () => {
+        if (!vp.current) {
+            return;
+        }
+        const result = vp.current.play();
+        if (result && typeof result.catch === 'function') {
+            result.catch(() => {});
+        }
+    };
+
     const endHandler = (userSelected = false) => {
         if (userSelected) {
             // User manually selected a video, play immediately
@@ -21,7 +34,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             setCurrentSubtitle(subtitlesFile);
             if (vp.current) {
                 vp.current.load();
-                vp.current.play();
+                safePlay();
             }
         } else {
             // Video ended, show countdown before playing next
@@ -40,7 +53,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             setTimeout(() => {
                 if (vp.current) {
                     vp.current.load();
-                    vp.current.play();
+                    safePlay();
                 }
             }, 100);
         }
@@ -55,7 +68,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         setTimeout(() => {
             if (vp.current) {
                 vp.current.load();
-                vp.current.play();
+                safePlay();
             }
         }, 100);
     };
@@ -183,7 +196,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                         className='control-btn'
                         onClick={() => {
                             if (vp.current.paused) {
-                                vp.current.play();
+                                safePlay();
                                 setIsPlaying(true);
                             } else {
                                 vp.current.pause();

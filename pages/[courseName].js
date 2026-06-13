@@ -92,7 +92,25 @@ function CourseName({ courseName }) {
         setVideoFile(videoFileList[index]);
         setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
         setCurrentVideoFileIndex(index);
+        // On mobile the sidebar overlays the whole screen, so collapse it
+        // after picking a lesson to reveal the player.
+        if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+            collapseSideBar();
+        }
     };
+
+    // Courses load asynchronously, so on the first render videoFileList is
+    // empty and videoFile is undefined. Once the course data arrives, seed the
+    // initial lesson (honoring any ?topic/?lesson params) so the player loads a
+    // video instead of sitting on the "Select a lesson" placeholder.
+    useEffect(() => {
+        if (!videoFile && videoFileList.length > 0) {
+            const index = getVideoFileIndex(topic, lesson);
+            setVideoFile(videoFileList[index]);
+            setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
+            setCurrentVideoFileIndex(index);
+        }
+    }, [videoFileList, videoFile, topic, lesson]);
 
     useEffect(() => {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
