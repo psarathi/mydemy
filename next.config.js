@@ -5,6 +5,26 @@ const nextConfig = {
   // Enable static export for Tauri builds only (not in dev mode)
   ...(process.env.TAURI_BUILD === 'true' && { output: 'export' }),
 
+  // Proxy media through the app's own origin so the browser never has to
+  // resolve the CDN hostname itself. This fixes video playback on devices that
+  // can't resolve `mydemy.learn` (e.g. a phone that reaches the app by LAN IP):
+  // the /cdn request inherits the app's host and Next forwards it to the real
+  // CDN server-side. Skipped for the Tauri static export, which has no server
+  // and talks to the absolute CDN URL directly.
+  ...(process.env.TAURI_BUILD === 'true'
+    ? {}
+    : {
+        async rewrites() {
+          const cdn =
+            process.env.NEXT_PUBLIC_BASE_CDN_PATH || 'http://192.168.1.141:5555';
+          return {
+            beforeFiles: [
+              { source: '/cdn/:path*', destination: `${cdn}/:path*` },
+            ],
+          };
+        },
+      }),
+
   // Compiler optimizations (Next.js 15 uses SWC by default)
   compiler: {
     // Remove console logs in production

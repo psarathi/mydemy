@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
+import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
@@ -102,7 +102,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         track.kind = 'captions';
         track.label = 'English';
         track.srclang = 'en';
-        track.src = `${BASE_CDN_PATH}/${currentSubtitle}`;
+        track.src = `${getCdnBase()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
             if (vp.current && vp.current.textTracks && vp.current.textTracks[0]) {
@@ -268,7 +268,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             onError={(e) => console.error('Video error:', e)}
                         >
                             <source
-                                src={`${BASE_CDN_PATH}/${currentVideo}`}
+                                src={`${getCdnBase()}/${currentVideo}`}
                                 type={(() => {
                                     const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
                                     return VIDEO_MIME_TYPES[ext] || 'video/mp4';
@@ -276,7 +276,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             />
                             <p className='video-fallback'>
                                 Your browser doesn&apos;t support HTML5 video.
-                                <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
+                                <a href={`${getCdnBase()}/${currentVideo}`}>Download the video</a> instead.
                             </p>
                         </video>
                     ) : (

@@ -1,6 +1,24 @@
 // Use environment variables with fallbacks
 // BASE_CDN_PATH needs NEXT_PUBLIC_ prefix since it's used in client-side code
 exports.BASE_CDN_PATH = process.env.NEXT_PUBLIC_BASE_CDN_PATH || 'http://192.168.1.141:5555';
+
+// The browser-facing base for media (video/subtitle) URLs.
+//
+// On the web build we serve media through a same-origin "/cdn" path that
+// next.config.js rewrites to the real CDN server-side. That way the media URL
+// always inherits whatever host the client used to reach the app — the
+// `mydemy.learn` hostname on machines that have it in /etc/hosts, the LAN IP on
+// a phone that doesn't — so playback never depends on the client being able to
+// resolve the CDN hostname itself.
+//
+// The Tauri desktop build is a static export with no server to proxy through,
+// so it must point straight at the absolute CDN URL.
+exports.getCdnBase = function getCdnBase() {
+    if (typeof window !== 'undefined' && window.__TAURI__ !== undefined) {
+        return exports.BASE_CDN_PATH;
+    }
+    return '/cdn';
+};
 // COURSES_FOLDER is server-side only
 exports.COURSES_FOLDER = process.env.COURSES_FOLDER || '/Volumes/medianas/Videos';
 exports.LOCAL_CDN = 'Videos';

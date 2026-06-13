@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import { BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS } from '../constants';
+import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase } from '../constants';
 import { addToHistory } from '../utils/courseTracking';
 import { useSession } from 'next-auth/react';
 import { useCourses } from '../hooks/useCourses';
@@ -140,7 +140,13 @@ function CourseName({ courseName }) {
     };
 
     function copyVideoURL(e, filePath) {
-        navigator.clipboard.writeText(`${BASE_CDN_PATH}/${filePath}`);
+        // getCdnBase() returns a relative "/cdn" on the web build; prefix the
+        // current origin so the copied URL is fully-qualified and shareable.
+        const base = getCdnBase();
+        const url = base.startsWith('http')
+            ? `${base}/${filePath}`
+            : `${window.location.origin}${base}/${filePath}`;
+        navigator.clipboard.writeText(url);
         e.stopPropagation();
     }
 
