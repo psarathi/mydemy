@@ -15,8 +15,15 @@ const nextConfig = {
     ? {}
     : {
         async rewrites() {
+          // Server-side proxy target — this fetch runs on the deploy host, so
+          // it must be a name the *server* can resolve. Default to the CDN's
+          // LAN IP (co-located with the app) rather than the client-facing
+          // NEXT_PUBLIC_BASE_CDN_PATH, which may be a hostname like
+          // `mydemy.learn` that only exists in client machines' /etc/hosts and
+          // fails to resolve on the server (→ 500). Override with
+          // CDN_PROXY_TARGET if the CDN ever moves off the app host.
           const cdn =
-            process.env.NEXT_PUBLIC_BASE_CDN_PATH || 'http://192.168.1.141:5555';
+            process.env.CDN_PROXY_TARGET || 'http://192.168.1.141:5555';
           return {
             beforeFiles: [
               { source: '/cdn/:path*', destination: `${cdn}/:path*` },
