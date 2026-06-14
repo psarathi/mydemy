@@ -1432,7 +1432,8 @@ button {
     background: var(--bg);
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
     position: relative;
 }
@@ -1450,7 +1451,8 @@ button {
 /* Video Container */
 .modern-video-container {
     width: 100%;
-    height: 100vh;
+    flex: 1;
+    min-height: 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -2721,14 +2723,18 @@ input:checked + .slider:before {
         min-height: 0;
     }
 
-    /* Course player responsive */
+    /* Course player responsive.
+       The sidebar is position:fixed (out of grid flow) at this breakpoint,
+       so the grid only lays out the video section — give it a single
+       full-height row so it fills 100dvh instead of collapsing. */
     .modern-course-layout {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr;
     }
 
     .modern-course-layout.sidebar-collapsed {
         grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
     }
 
     .modern-sidebar {

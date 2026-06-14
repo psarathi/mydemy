@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import { BASE_CDN_PATH, LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS } from '../constants';
+import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase } from '../constants';
 import { addToHistory } from '../utils/courseTracking';
 import { useSession } from 'next-auth/react';
 import { useCourses } from '../hooks/useCourses';
@@ -92,7 +92,25 @@ function CourseName({ courseName }) {
         setVideoFile(videoFileList[index]);
         setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
         setCurrentVideoFileIndex(index);
+        // On mobile the sidebar overlays the whole screen, so collapse it
+        // after picking a lesson to reveal the player.
+        if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+            collapseSideBar();
+        }
     };
+
+    // Courses load asynchronously, so on the first render videoFileList is
+    // empty and videoFile is undefined. Once the course data arrives, seed the
+    // initial lesson (honoring any ?topic/?lesson params) so the player loads a
+    // video instead of sitting on the "Select a lesson" placeholder.
+    useEffect(() => {
+        if (!videoFile && videoFileList.length > 0) {
+            const index = getVideoFileIndex(topic, lesson);
+            setVideoFile(videoFileList[index]);
+            setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
+            setCurrentVideoFileIndex(index);
+        }
+    }, [videoFileList, videoFile, topic, lesson]);
 
     useEffect(() => {
         setCurrentVideo(getVideoFileNameAtGivenIndex(currentVideoFileIndex));
@@ -122,7 +140,13 @@ function CourseName({ courseName }) {
     };
 
     function copyVideoURL(e, filePath) {
-        navigator.clipboard.writeText(`${BASE_CDN_PATH}/${filePath}`);
+        // getCdnBase() returns a relative "/cdn" on the web build; prefix the
+        // current origin so the copied URL is fully-qualified and shareable.
+        const base = getCdnBase();
+        const url = base.startsWith('http')
+            ? `${base}/${filePath}`
+            : `${window.location.origin}${base}/${filePath}`;
+        navigator.clipboard.writeText(url);
         e.stopPropagation();
     }
 

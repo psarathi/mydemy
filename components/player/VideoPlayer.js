@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BASE_CDN_PATH, VIDEO_MIME_TYPES } from '../../constants';
+import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
@@ -14,6 +14,19 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
 
+    // Mobile browsers reject play() when autoplay-with-audio is blocked
+    // (NotAllowedError). Swallow that rejection so it doesn't surface as an
+    // uncaught promise error; the native controls let the user start playback.
+    const safePlay = () => {
+        if (!vp.current) {
+            return;
+        }
+        const result = vp.current.play();
+        if (result && typeof result.catch === 'function') {
+            result.catch(() => {});
+        }
+    };
+
     const endHandler = (userSelected = false) => {
         if (userSelected) {
             // User manually selected a video, play immediately
@@ -21,7 +34,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             setCurrentSubtitle(subtitlesFile);
             if (vp.current) {
                 vp.current.load();
-                vp.current.play();
+                safePlay();
             }
         } else {
             // Video ended, show countdown before playing next
@@ -40,7 +53,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             setTimeout(() => {
                 if (vp.current) {
                     vp.current.load();
-                    vp.current.play();
+                    safePlay();
                 }
             }, 100);
         }
@@ -55,7 +68,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         setTimeout(() => {
             if (vp.current) {
                 vp.current.load();
-                vp.current.play();
+                safePlay();
             }
         }, 100);
     };
@@ -89,7 +102,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         track.kind = 'captions';
         track.label = 'English';
         track.srclang = 'en';
-        track.src = `${BASE_CDN_PATH}/${currentSubtitle}`;
+        track.src = `${getCdnBase()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
             if (vp.current && vp.current.textTracks && vp.current.textTracks[0]) {
@@ -183,7 +196,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                         className='control-btn'
                         onClick={() => {
                             if (vp.current.paused) {
-                                vp.current.play();
+                                safePlay();
                                 setIsPlaying(true);
                             } else {
                                 vp.current.pause();
@@ -255,7 +268,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             onError={(e) => console.error('Video error:', e)}
                         >
                             <source
-                                src={`${BASE_CDN_PATH}/${currentVideo}`}
+                                src={`${getCdnBase()}/${currentVideo}`}
                                 type={(() => {
                                     const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
                                     return VIDEO_MIME_TYPES[ext] || 'video/mp4';
@@ -263,7 +276,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             />
                             <p className='video-fallback'>
                                 Your browser doesn&apos;t support HTML5 video.
-                                <a href={`${BASE_CDN_PATH}/${currentVideo}`}>Download the video</a> instead.
+                                <a href={`${getCdnBase()}/${currentVideo}`}>Download the video</a> instead.
                             </p>
                         </video>
                     ) : (
