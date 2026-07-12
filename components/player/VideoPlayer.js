@@ -7,6 +7,8 @@ function VideoPlayer({
     videoFile,
     subtitlesFile,
     getNextVideo,
+    startTime = 0,
+    onProgress,
     onTimeUpdate,
     onCaptureBookmark,
     onCaptureNote,
@@ -197,6 +199,19 @@ function VideoPlayer({
                     .padStart(2, '0')})`
             );
         }
+        if (vp.current && startTime > 0 && vp.current.currentTime < 1) {
+            vp.current.currentTime = startTime;
+        }
+    };
+
+    const reportProgress = () => {
+        if (!vp.current || !onProgress) {
+            return;
+        }
+        onProgress({
+            currentTime: vp.current.currentTime,
+            duration: vp.current.duration || 0,
+        });
     };
 
     const getCurrentSeconds = () =>
@@ -208,6 +223,7 @@ function VideoPlayer({
         if (onTimeUpdate) {
             onTimeUpdate(seconds);
         }
+        reportProgress();
     };
 
     const formatTimestamp = (seconds) => {
@@ -382,13 +398,16 @@ function VideoPlayer({
                             className='modern-video-player'
                             controls
                             autoPlay
-                            onEnded={() => endHandler()}
                             onPlay={() => setIsPlaying(true)}
                             onPause={() => setIsPlaying(false)}
                             onTimeUpdate={handleTimeUpdate}
                             ref={vp}
                             onLoadStart={addTrack}
                             onLoadedMetadata={getVideoDuration}
+                            onEnded={() => {
+                                reportProgress();
+                                endHandler();
+                            }}
                             preload='metadata'
                             playsInline
                             controlsList='nodownload'

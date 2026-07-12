@@ -6,7 +6,12 @@ import ThemeToggle from '../common/ThemeToggle';
 import HamburgerMenu from '../common/HamburgerMenu';
 import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
-import {addToHistory} from '../../utils/courseTracking';
+import {
+    addToHistory,
+    formatProgressTime,
+    getCourseProgressSummary,
+    getLessonProgress,
+} from '../../utils/courseTracking';
 import {addTag, removeTag, getTags, getTagCounts} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
@@ -31,6 +36,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [previewCourse, setPreviewCourse] = useState({});
     const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
     const [activeTags, setActiveTags] = useState([]);
+    const [lessonProgress, setLessonProgress] = useState({});
     const [tagFilterMode, setTagFilterMode] = useState('OR');
     const [allTagCounts, setAllTagCounts] = useState([]);
     const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -72,6 +78,19 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
 
         window.addEventListener('courseTagsUpdated', handleTagsUpdated);
         return () => window.removeEventListener('courseTagsUpdated', handleTagsUpdated);
+    }, []);
+
+    useEffect(() => {
+        setLessonProgress(getLessonProgress());
+
+        const handleLessonProgressUpdated = (event) => {
+            setLessonProgress(event.detail.progress || getLessonProgress());
+        };
+
+        window.addEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+        return () => {
+            window.removeEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+        };
     }, []);
 
     // Autocomplete: show when typing # in search
@@ -501,12 +520,15 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 </div>
                 
                 <div className='courses-grid'>
-                    {courseList.map((course, i) => (
-                        <div
-                            key={i}
-                            className='course-card'
-                            onMouseEnter={(event) => showCourseDetails(event, course)}
-                        >
+                    {courseList.map((course, i) => {
+                        const progressSummary = getCourseProgressSummary(course, lessonProgress);
+
+                        return (
+                            <div
+                                key={i}
+                                className='course-card'
+                                onMouseEnter={(event) => showCourseDetails(event, course)}
+                            >
                             <div className='course-card-content'>
                                 <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
                                     <h3 className='course-title'>{course.name}</h3>
@@ -527,6 +549,29 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
                                     </span>
                                 </div>
+                                {progressSummary.totalLessons > 0 && progressSummary.activeLesson && (
+                                    <div className='course-progress-summary'>
+                                        <div className='course-progress-bar' aria-label={`${progressSummary.percentComplete}% complete`}>
+                                            <span style={{width: `${progressSummary.percentComplete}%`}} />
+                                        </div>
+                                        <div className='course-progress-meta'>
+                                            <span>{progressSummary.percentComplete}% complete</span>
+                                            <Link
+                                                href={{
+                                                    pathname: course.name,
+                                                    query: {
+                                                        topic: progressSummary.activeLesson.topicName,
+                                                        lesson: progressSummary.activeLesson.lessonName,
+                                                    },
+                                                }}
+                                                className='course-resume-link'
+                                                onClick={() => handleCourseClick(course)}
+                                            >
+                                                Resume {formatProgressTime(progressSummary.activeLesson.currentTime)}
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className='course-tags'>
                                     {getTags(course.name).map(tag => (
                                         <TagButton key={tag} course={course} tag={tag} />
@@ -558,7 +603,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                 </button>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
             
