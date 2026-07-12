@@ -3,7 +3,13 @@ import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
 import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase } from '../constants';
-import { addToHistory } from '../utils/courseTracking';
+import {
+    addToHistory,
+    formatProgressTime,
+    getLessonProgress,
+    getLessonProgressEntry,
+    saveLessonProgress,
+} from '../utils/courseTracking';
 import { useSession } from 'next-auth/react';
 import { useCourses } from '../hooks/useCourses';
 
@@ -57,6 +63,7 @@ function CourseName({ courseName }) {
         }
         return false;
     });
+    const [lessonProgress, setLessonProgress] = useState({});
     const activeElementRef = useRef(null);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
@@ -99,6 +106,44 @@ function CourseName({ courseName }) {
         }
     };
 
+    const getLessonMetaByFileName = (fileName) => {
+        if (!course || !fileName) return null;
+
+        for (const topicItem of course.topics) {
+            const lessonFile = topicItem.files.find(
+                (file) => getFileName(course, topicItem, file) === fileName
+            );
+            if (lessonFile) {
+                return {
+                    topicName: topicItem.name,
+                    lessonName: lessonFile.name,
+                };
+            }
+        }
+
+        return null;
+    };
+
+    const activeLessonMeta = getLessonMetaByFileName(videoFile);
+    const activeLessonProgress = activeLessonMeta
+        ? getLessonProgressEntry(
+            courseName,
+            activeLessonMeta.topicName,
+            activeLessonMeta.lessonName
+        )
+        : null;
+
+    const handleVideoProgress = ({currentTime, duration}) => {
+        if (!activeLessonMeta) return;
+        saveLessonProgress({
+            courseName,
+            topicName: activeLessonMeta.topicName,
+            lessonName: activeLessonMeta.lessonName,
+            currentTime,
+            duration,
+        });
+    };
+
     // Courses load asynchronously, so on the first render videoFileList is
     // empty and videoFile is undefined. Once the course data arrives, seed the
     // initial lesson (honoring any ?topic/?lesson params) so the player loads a
@@ -130,6 +175,19 @@ function CourseName({ courseName }) {
             }
         }, 100);
     }, [currentVideoFileIndex, course]);
+
+    useEffect(() => {
+        setLessonProgress(getLessonProgress());
+
+        const handleLessonProgressUpdated = (event) => {
+            setLessonProgress(event.detail.progress || getLessonProgress());
+        };
+
+        window.addEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+        return () => {
+            window.removeEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+        };
+    }, []);
 
     const collapseSideBar = () => {
         setIsSidebarCollapsed(true);
@@ -243,21 +301,31 @@ function CourseName({ courseName }) {
                                 <div className='modern-lessons-list'>
                                     {topic.files
                                         .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
-                                        .map((file, fileIndex) => (
-                                            <div
-                                                key={fileIndex}
-                                                ref={getFileName(course, topic, file) === currentVideo ? activeElementRef : null}
-                                                className={`modern-lesson-item ${getFileName(course, topic, file) === currentVideo ? 'active' : ''
-                                                    }`}
-                                                onClick={() =>
-                                                    playSelectedVideo(
-                                                        getFileName(course, topic, file)
-                                                    )
-                                                }
-                                            >
+                                        .map((file, fileIndex) => {
+                                            const lessonEntry = lessonProgress[
+                                                `${courseName}::${topic.name}::${file.name}`
+                                            ];
+                                            const isActive = getFileName(course, topic, file) === currentVideo;
+
+                                            return (
+                                                <div
+                                                    key={fileIndex}
+                                                    ref={isActive ? activeElementRef : null}
+                                                    className={`modern-lesson-item ${isActive ? 'active' : ''
+                                                        } ${lessonEntry?.completed ? 'completed' : ''}`}
+                                                    onClick={() =>
+                                                        playSelectedVideo(
+                                                            getFileName(course, topic, file)
+                                                        )
+                                                    }
+                                                >
                                                 <div className='lesson-content'>
                                                     <div className='lesson-play-icon'>
-                                                        {getFileName(course, topic, file) === currentVideo ? (
+                                                        {lessonEntry?.completed ? (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <path d="M20 6L9 17l-5-5"></path>
+                                                            </svg>
+                                                        ) : isActive ? (
                                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                                 <rect x="6" y="4" width="4" height="16"></rect>
                                                                 <rect x="14" y="4" width="4" height="16"></rect>
@@ -270,6 +338,13 @@ function CourseName({ courseName }) {
                                                     </div>
                                                     <div className='lesson-info'>
                                                         <span className='lesson-name'>{file.name}</span>
+                                                        {lessonEntry && (
+                                                            <span className='lesson-progress-status'>
+                                                                {lessonEntry.completed
+                                                                    ? 'Complete'
+                                                                    : `Started ${formatProgressTime(lessonEntry.currentTime)}`}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <button
@@ -288,7 +363,8 @@ function CourseName({ courseName }) {
                                                     </svg>
                                                 </button>
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                 </div>
                             </div>
                         ))}
@@ -300,6 +376,8 @@ function CourseName({ courseName }) {
                         videoFile={videoFile}
                         subtitlesFile={subtitlesFile}
                         getNextVideo={getNextVideo}
+                        startTime={activeLessonProgress?.currentTime || 0}
+                        onProgress={handleVideoProgress}
                     />
                 </main>
             </div>

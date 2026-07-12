@@ -3,7 +3,7 @@ import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
-function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
+function VideoPlayer({ videoFile, subtitlesFile, getNextVideo, startTime = 0, onProgress }) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
@@ -171,6 +171,19 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                     .padStart(2, '0')})`
             );
         }
+        if (vp.current && startTime > 0 && vp.current.currentTime < 1) {
+            vp.current.currentTime = startTime;
+        }
+    };
+
+    const reportProgress = () => {
+        if (!vp.current || !onProgress) {
+            return;
+        }
+        onProgress({
+            currentTime: vp.current.currentTime,
+            duration: vp.current.duration || 0,
+        });
     };
 
     return (
@@ -256,12 +269,16 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             className='modern-video-player'
                             controls
                             autoPlay
-                            onEnded={() => endHandler()}
                             onPlay={() => setIsPlaying(true)}
                             onPause={() => setIsPlaying(false)}
                             ref={vp}
                             onLoadStart={addTrack}
                             onLoadedMetadata={getVideoDuration}
+                            onTimeUpdate={reportProgress}
+                            onEnded={() => {
+                                reportProgress();
+                                endHandler();
+                            }}
                             preload="metadata"
                             playsInline
                             controlsList="nodownload"

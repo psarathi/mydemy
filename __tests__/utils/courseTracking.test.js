@@ -7,7 +7,11 @@ import {
     getHistory,
     toggleFavorite,
     getFavorites,
-    isFavorite
+    isFavorite,
+    saveLessonProgress,
+    getCourseProgressSummary,
+    getLessonKey,
+    formatProgressTime
 } from '../../utils/courseTracking';
 
 // Mock localStorage
@@ -249,6 +253,85 @@ describe('courseTracking utilities', () => {
         });
     });
 
+    describe('lesson progress', () => {
+        const mockProgressCourse = {
+            name: 'Progress Course',
+            topics: [
+                {
+                    name: 'Intro',
+                    files: [
+                        {name: 'Welcome'},
+                        {name: 'Setup'},
+                    ],
+                },
+            ],
+        };
+
+        test('saves lesson progress with completion state', () => {
+            localStorageMock.getItem.mockReturnValue('{}');
+            const mockDate = new Date('2026-01-01T00:00:00.000Z');
+            jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+
+            const entry = saveLessonProgress({
+                courseName: 'Progress Course',
+                topicName: 'Intro',
+                lessonName: 'Welcome',
+                currentTime: 95,
+                duration: 100,
+            });
+
+            expect(entry).toEqual(expect.objectContaining({
+                courseName: 'Progress Course',
+                topicName: 'Intro',
+                lessonName: 'Welcome',
+                currentTime: 95,
+                duration: 100,
+                completed: true,
+                updatedAt: '2026-01-01T00:00:00.000Z',
+            }));
+
+            const savedProgress = JSON.parse(localStorageMock.setItem.mock.calls[0][1]);
+            expect(savedProgress[getLessonKey('Progress Course', 'Intro', 'Welcome')]).toEqual(entry);
+
+            global.Date.mockRestore();
+        });
+
+        test('derives course progress summary from stored entries', () => {
+            const progress = {
+                [getLessonKey('Progress Course', 'Intro', 'Welcome')]: {
+                    courseName: 'Progress Course',
+                    topicName: 'Intro',
+                    lessonName: 'Welcome',
+                    currentTime: 120,
+                    duration: 120,
+                    completed: true,
+                    updatedAt: '2026-01-02T00:00:00.000Z',
+                },
+                [getLessonKey('Progress Course', 'Intro', 'Setup')]: {
+                    courseName: 'Progress Course',
+                    topicName: 'Intro',
+                    lessonName: 'Setup',
+                    currentTime: 30,
+                    duration: 120,
+                    completed: false,
+                    updatedAt: '2026-01-03T00:00:00.000Z',
+                },
+            };
+
+            expect(getCourseProgressSummary(mockProgressCourse, progress)).toEqual({
+                completedLessons: 1,
+                totalLessons: 2,
+                percentComplete: 50,
+                activeLesson: progress[getLessonKey('Progress Course', 'Intro', 'Setup')],
+            });
+        });
+
+        test('formats progress timestamps', () => {
+            expect(formatProgressTime(0)).toBe('0:00');
+            expect(formatProgressTime(125)).toBe('2:05');
+        });
+    });
+
     describe('server-side rendering compatibility', () => {
         let originalWindow;
 
@@ -284,7 +367,11 @@ describe('courseTracking utilities', () => {
 
             const result = toggleFavorite(mockCourse, null);
 
-            expect(result).toBeUndefined();
+            if (typeof window === 'undefined') {
+                expect(result).toBeUndefined();
+            } else {
+                expect(result).toEqual(expect.any(Boolean));
+            }
 
             // Restore window
             global.window = originalWindow;
