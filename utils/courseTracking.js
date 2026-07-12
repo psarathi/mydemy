@@ -1,5 +1,6 @@
 // Course tracking utilities
 const LESSON_PROGRESS_KEY = 'lessonProgress';
+const ANNOTATIONS_KEY = 'mydemyLessonAnnotations:v1';
 
 const readJsonArray = (key) => {
     if (typeof window === 'undefined') return [];
@@ -13,9 +14,22 @@ const readJsonObject = (key) => {
 
 const writeLessonProgress = (progress) => {
     localStorage.setItem(LESSON_PROGRESS_KEY, JSON.stringify(progress));
-    window.dispatchEvent(new CustomEvent('lessonProgressUpdated', {
-        detail: {progress}
-    }));
+    window.dispatchEvent(
+        new CustomEvent('lessonProgressUpdated', {
+            detail: {progress},
+        })
+    );
+};
+
+const readAnnotationStore = () => readJsonObject(ANNOTATIONS_KEY);
+
+const writeAnnotationStore = (store) => {
+    localStorage.setItem(ANNOTATIONS_KEY, JSON.stringify(store));
+    window.dispatchEvent(
+        new CustomEvent('lessonAnnotationsUpdated', {
+            detail: {annotations: store},
+        })
+    );
 };
 
 export const getLessonKey = (courseName, topicName, lessonName) =>
@@ -25,25 +39,22 @@ export const addToHistory = (course, session = null) => {
     if (typeof window === 'undefined') return;
 
     const history = readJsonArray('courseHistory');
-
-    // Remove existing entry if it exists
-    const filteredHistory = history.filter(item => item.name !== course.name);
-
-    // Add to beginning with current timestamp
-    const newHistory = [{
-        ...course,
-        viewedAt: new Date().toISOString()
-    }, ...filteredHistory];
-
-    // Keep only last 50 items
+    const filteredHistory = history.filter((item) => item.name !== course.name);
+    const newHistory = [
+        {
+            ...course,
+            viewedAt: new Date().toISOString(),
+        },
+        ...filteredHistory,
+    ];
     const trimmedHistory = newHistory.slice(0, 50);
 
     localStorage.setItem('courseHistory', JSON.stringify(trimmedHistory));
-
-    // Dispatch custom event for components to listen to
-    window.dispatchEvent(new CustomEvent('courseHistoryUpdated', {
-        detail: { course, history: trimmedHistory }
-    }));
+    window.dispatchEvent(
+        new CustomEvent('courseHistoryUpdated', {
+            detail: {course, history: trimmedHistory},
+        })
+    );
 };
 
 export const getHistory = () => {
@@ -54,24 +65,27 @@ export const toggleFavorite = (course, session = null) => {
     if (typeof window === 'undefined') return;
 
     const favorites = readJsonArray('courseFavorites');
-    const isFavorite = favorites.some(fav => fav.name === course.name);
+    const isFavorite = favorites.some((fav) => fav.name === course.name);
 
     let newFavorites;
     if (isFavorite) {
-        newFavorites = favorites.filter(fav => fav.name !== course.name);
+        newFavorites = favorites.filter((fav) => fav.name !== course.name);
     } else {
-        newFavorites = [...favorites, {
-            ...course,
-            favoritedAt: new Date().toISOString()
-        }];
+        newFavorites = [
+            ...favorites,
+            {
+                ...course,
+                favoritedAt: new Date().toISOString(),
+            },
+        ];
     }
 
     localStorage.setItem('courseFavorites', JSON.stringify(newFavorites));
-
-    // Dispatch custom event for components to listen to
-    window.dispatchEvent(new CustomEvent('courseFavoritesUpdated', {
-        detail: { course, favorites: newFavorites, isFavorite: !isFavorite }
-    }));
+    window.dispatchEvent(
+        new CustomEvent('courseFavoritesUpdated', {
+            detail: {course, favorites: newFavorites, isFavorite: !isFavorite},
+        })
+    );
 
     return !isFavorite;
 };
@@ -83,7 +97,7 @@ export const getFavorites = () => {
 export const isFavorite = (courseName) => {
     if (typeof window === 'undefined') return false;
     const favorites = readJsonArray('courseFavorites');
-    return favorites.some(fav => fav.name === courseName);
+    return favorites.some((fav) => fav.name === courseName);
 };
 
 export const getLessonProgress = () => {
@@ -102,12 +116,18 @@ export const saveLessonProgress = ({
     currentTime = 0,
     duration = 0,
 }) => {
-    if (typeof window === 'undefined' || !courseName || !lessonName) return null;
+    if (typeof window === 'undefined' || !courseName || !lessonName) {
+        return null;
+    }
 
     const progress = getLessonProgress();
     const key = getLessonKey(courseName, topicName, lessonName);
-    const normalizedDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
-    const normalizedTime = Number.isFinite(currentTime) ? Math.max(currentTime, 0) : 0;
+    const normalizedDuration = Number.isFinite(duration)
+        ? Math.max(duration, 0)
+        : 0;
+    const normalizedTime = Number.isFinite(currentTime)
+        ? Math.max(currentTime, 0)
+        : 0;
     const completionThreshold = normalizedDuration
         ? Math.min(normalizedDuration * 0.9, normalizedDuration - 30)
         : Infinity;
@@ -138,18 +158,25 @@ export const getCourseProgressSummary = (course, progressOverride = null) => {
     }
 
     const progress = progressOverride || getLessonProgress();
-    const lessons = course.topics?.flatMap(topic =>
-        (topic.files || []).map(file => ({
-            topicName: topic.name,
-            lessonName: file.name,
-            entry: progress[getLessonKey(course.name, topic.name, file.name)] || null,
-        }))
-    ) || [];
-    const completedLessons = lessons.filter(lesson => lesson.entry?.completed).length;
-    const activeLesson = lessons
-        .map(lesson => lesson.entry)
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0] || null;
+    const lessons =
+        course.topics?.flatMap((topic) =>
+            (topic.files || []).map((file) => ({
+                topicName: topic.name,
+                lessonName: file.name,
+                entry:
+                    progress[getLessonKey(course.name, topic.name, file.name)] ||
+                    null,
+            }))
+        ) || [];
+    const completedLessons = lessons.filter(
+        (lesson) => lesson.entry?.completed
+    ).length;
+    const activeLesson =
+        lessons
+            .map((lesson) => lesson.entry)
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0] ||
+        null;
 
     return {
         completedLessons,
@@ -166,4 +193,55 @@ export const formatProgressTime = (seconds = 0) => {
     const minutes = Math.floor(safeSeconds / 60);
     const remainder = `${safeSeconds % 60}`.padStart(2, '0');
     return `${minutes}:${remainder}`;
+};
+
+export const getLessonAnnotationKey = (courseName, lessonPath) =>
+    `${courseName || 'unknown-course'}::${lessonPath || 'unknown-lesson'}`;
+
+export const getLessonAnnotations = (courseName, lessonPath) => {
+    const store = readAnnotationStore();
+    const key = getLessonAnnotationKey(courseName, lessonPath);
+    return [...(store[key] || [])].sort(
+        (a, b) => a.timeSeconds - b.timeSeconds
+    );
+};
+
+export const saveLessonAnnotation = (courseName, lessonPath, annotation) => {
+    if (typeof window === 'undefined') return null;
+    const store = readAnnotationStore();
+    const key = getLessonAnnotationKey(courseName, lessonPath);
+    const now = new Date().toISOString();
+    const existing = store[key] || [];
+    const saved = {
+        id:
+            annotation.id ||
+            `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: annotation.type === 'note' ? 'note' : 'bookmark',
+        timeSeconds: Math.max(
+            0,
+            Math.floor(Number(annotation.timeSeconds) || 0)
+        ),
+        text: annotation.text || '',
+        createdAt: annotation.createdAt || now,
+        updatedAt: now,
+    };
+    store[key] = [
+        ...existing.filter((item) => item.id !== saved.id),
+        saved,
+    ].sort((a, b) => a.timeSeconds - b.timeSeconds);
+    writeAnnotationStore(store);
+    return saved;
+};
+
+export const deleteLessonAnnotation = (
+    courseName,
+    lessonPath,
+    annotationId
+) => {
+    if (typeof window === 'undefined') return [];
+    const store = readAnnotationStore();
+    const key = getLessonAnnotationKey(courseName, lessonPath);
+    store[key] = (store[key] || []).filter((item) => item.id !== annotationId);
+    writeAnnotationStore(store);
+    return store[key];
 };
