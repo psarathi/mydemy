@@ -10,6 +10,7 @@ import {
     isFavorite,
     saveLessonProgress,
     getCourseProgressSummary,
+    getCourseResumeUrl,
     getLessonKey,
     formatProgressTime
 } from '../../utils/courseTracking';
@@ -292,8 +293,56 @@ describe('courseTracking utilities', () => {
 
             const savedProgress = JSON.parse(localStorageMock.setItem.mock.calls[0][1]);
             expect(savedProgress[getLessonKey('Progress Course', 'Intro', 'Welcome')]).toEqual(entry);
+            expect(localStorageMock.setItem.mock.calls[0][0]).toBe('mydemyLessonProgress:v1');
 
             global.Date.mockRestore();
+        });
+
+        test('preserves completed lessons when a learner restarts them', () => {
+            const key = getLessonKey('Progress Course', 'Intro', 'Welcome');
+            localStorageMock.getItem.mockReturnValue(JSON.stringify({
+                [key]: {
+                    courseName: 'Progress Course',
+                    topicName: 'Intro',
+                    lessonName: 'Welcome',
+                    currentTime: 120,
+                    duration: 120,
+                    completed: true,
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            }));
+
+            const entry = saveLessonProgress({
+                courseName: 'Progress Course',
+                topicName: 'Intro',
+                lessonName: 'Welcome',
+                currentTime: 5,
+                duration: 120,
+            });
+
+            expect(entry.completed).toBe(true);
+            expect(entry.currentTime).toBe(5);
+        });
+
+        test('falls back to legacy lesson progress when versioned progress is empty', () => {
+            const legacyProgress = {
+                [getLessonKey('Progress Course', 'Intro', 'Setup')]: {
+                    courseName: 'Progress Course',
+                    topicName: 'Intro',
+                    lessonName: 'Setup',
+                    currentTime: 30,
+                    duration: 120,
+                    completed: false,
+                    updatedAt: '2026-01-03T00:00:00.000Z',
+                },
+            };
+            localStorageMock.getItem.mockImplementation((key) =>
+                key === 'lessonProgress' ? JSON.stringify(legacyProgress) : '{}'
+            );
+
+            expect(getCourseProgressSummary(mockProgressCourse).activeLesson).toEqual(
+                legacyProgress[getLessonKey('Progress Course', 'Intro', 'Setup')]
+            );
         });
 
         test('derives course progress summary from stored entries', () => {
@@ -329,6 +378,19 @@ describe('courseTracking utilities', () => {
         test('formats progress timestamps', () => {
             expect(formatProgressTime(0)).toBe('0:00');
             expect(formatProgressTime(125)).toBe('2:05');
+        });
+
+        test('builds course resume URLs with topic and lesson query params', () => {
+            expect(getCourseResumeUrl('Progress Course', {
+                topicName: 'Intro',
+                lessonName: 'Setup',
+            })).toEqual({
+                pathname: '/Progress Course',
+                query: {
+                    topic: 'Intro',
+                    lesson: 'Setup',
+                },
+            });
         });
     });
 
