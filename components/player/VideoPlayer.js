@@ -1,9 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
+import React, {useEffect, useRef, useState} from 'react';
+import {getCdnBase, VIDEO_MIME_TYPES} from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
-function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
+function VideoPlayer({
+    videoFile,
+    subtitlesFile,
+    getNextVideo,
+    onTimeUpdate,
+    onCaptureBookmark,
+    onCaptureNote,
+    seekToSeconds,
+}) {
     const vp = useRef(null);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
@@ -13,6 +21,7 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
     const [nextVideoInfo, setNextVideoInfo] = useState(null);
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+    const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
     // (NotAllowedError). Swallow that rejection so it doesn't surface as an
@@ -80,13 +89,14 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
 
     const getNextVideoInfo = () => {
         if (!nextVideoInfo || !nextVideoInfo.name) {
-            return { topic: '', lesson: 'Next video' };
+            return {topic: '', lesson: 'Next video'};
         }
         const pathParts = nextVideoInfo.name.split('/');
         // Path format: courses/course-name/topic-name/lesson-name.ext
         const lesson = pathParts[pathParts.length - 1].replace(/\.[^.]+$/, '');
-        const topic = pathParts.length >= 3 ? pathParts[pathParts.length - 2] : '';
-        return { topic, lesson };
+        const topic =
+            pathParts.length >= 3 ? pathParts[pathParts.length - 2] : '';
+        return {topic, lesson};
     };
 
     const addTrack = () => {
@@ -105,7 +115,11 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         track.src = `${getCdnBase()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
             this.mode = 'showing';
-            if (vp.current && vp.current.textTracks && vp.current.textTracks[0]) {
+            if (
+                vp.current &&
+                vp.current.textTracks &&
+                vp.current.textTracks[0]
+            ) {
                 vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
             }
         });
@@ -147,10 +161,16 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             }
         };
 
-        window.addEventListener('autoplaySettingsUpdated', handleSettingsUpdate);
+        window.addEventListener(
+            'autoplaySettingsUpdated',
+            handleSettingsUpdate
+        );
 
         return () => {
-            window.removeEventListener('autoplaySettingsUpdated', handleSettingsUpdate);
+            window.removeEventListener(
+                'autoplaySettingsUpdated',
+                handleSettingsUpdate
+            );
         };
     }, []);
 
@@ -160,6 +180,12 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
         endHandler(true);
     }, [videoFile, subtitlesFile]);
 
+    useEffect(() => {
+        if (vp.current && typeof seekToSeconds === 'number') {
+            vp.current.currentTime = seekToSeconds;
+            safePlay();
+        }
+    }, [seekToSeconds]);
 
     const getVideoDuration = () => {
         if (vp.current.duration) {
@@ -171,6 +197,23 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                     .padStart(2, '0')})`
             );
         }
+    };
+
+    const getCurrentSeconds = () =>
+        vp.current ? Math.floor(vp.current.currentTime || 0) : 0;
+
+    const handleTimeUpdate = () => {
+        const seconds = getCurrentSeconds();
+        setCaptureSeconds(seconds);
+        if (onTimeUpdate) {
+            onTimeUpdate(seconds);
+        }
+    };
+
+    const formatTimestamp = (seconds) => {
+        const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+        const minutes = Math.floor(safeSeconds / 60);
+        return `${minutes}:${String(safeSeconds % 60).padStart(2, '0')}`;
     };
 
     return (
@@ -189,7 +232,9 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
             />
             <div className='video-header'>
                 <div className='video-info'>
-                    <h2 className='video-title'>{getVideoName() || 'Select a lesson to start watching'}</h2>
+                    <h2 className='video-title'>
+                        {getVideoName() || 'Select a lesson to start watching'}
+                    </h2>
                 </div>
                 <div className='video-controls'>
                     <button
@@ -203,45 +248,126 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                                 setIsPlaying(false);
                             }
                         }}
-                        aria-label="Toggle play/pause"
+                        aria-label='Toggle play/pause'
                     >
                         {isPlaying ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="6" y="4" width="4" height="16"></rect>
-                                <rect x="14" y="4" width="4" height="16"></rect>
+                            <svg
+                                width='16'
+                                height='16'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                            >
+                                <rect x='6' y='4' width='4' height='16'></rect>
+                                <rect x='14' y='4' width='4' height='16'></rect>
                             </svg>
                         ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            <svg
+                                width='16'
+                                height='16'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                            >
+                                <polygon points='5 3 19 12 5 21 5 3'></polygon>
                             </svg>
                         )}
                     </button>
                     <button
                         className='control-btn'
                         onClick={skipToNextVideo}
-                        aria-label="Next video"
+                        aria-label='Next video'
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                            <line x1="19" y1="5" x2="19" y2="19"></line>
+                        <svg
+                            width='16'
+                            height='16'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                        >
+                            <polygon points='5 4 15 12 5 20 5 4'></polygon>
+                            <line x1='19' y1='5' x2='19' y2='19'></line>
                         </svg>
                     </button>
+                    {onCaptureBookmark && (
+                        <button
+                            className='control-btn'
+                            onClick={() =>
+                                onCaptureBookmark(getCurrentSeconds())
+                            }
+                            aria-label='Bookmark current timestamp'
+                            title='Bookmark current timestamp'
+                        >
+                            <svg
+                                width='16'
+                                height='16'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                            >
+                                <path d='M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z'></path>
+                            </svg>
+                        </button>
+                    )}
+                    {onCaptureNote && (
+                        <button
+                            className='control-btn'
+                            onClick={() => onCaptureNote(getCurrentSeconds())}
+                            aria-label='Add note at current timestamp'
+                            title='Add note at current timestamp'
+                        >
+                            <svg
+                                width='16'
+                                height='16'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                            >
+                                <path d='M12 20h9'></path>
+                                <path d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'></path>
+                            </svg>
+                        </button>
+                    )}
+                    {(onCaptureBookmark || onCaptureNote) && (
+                        <span className='video-duration'>
+                            Capture at {formatTimestamp(captureSeconds)}
+                        </span>
+                    )}
                     <button
                         className='control-btn'
                         onClick={() => setShowSettings(true)}
-                        aria-label="Video settings"
-                        title="Video settings"
+                        aria-label='Video settings'
+                        title='Video settings'
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path>
+                        <svg
+                            width='16'
+                            height='16'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                        >
+                            <circle cx='12' cy='12' r='3'></circle>
+                            <path d='M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24'></path>
                         </svg>
                     </button>
                     {videoDuration && (
                         <span className='video-duration'>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12,6 12,12 16,14"></polyline>
+                            <svg
+                                width='14'
+                                height='14'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                            >
+                                <circle cx='12' cy='12' r='10'></circle>
+                                <polyline points='12,6 12,12 16,14'></polyline>
                             </svg>
                             {videoDuration}
                         </span>
@@ -259,34 +385,50 @@ function VideoPlayer({ videoFile, subtitlesFile, getNextVideo }) {
                             onEnded={() => endHandler()}
                             onPlay={() => setIsPlaying(true)}
                             onPause={() => setIsPlaying(false)}
+                            onTimeUpdate={handleTimeUpdate}
                             ref={vp}
                             onLoadStart={addTrack}
                             onLoadedMetadata={getVideoDuration}
-                            preload="metadata"
+                            preload='metadata'
                             playsInline
-                            controlsList="nodownload"
+                            controlsList='nodownload'
                             onError={(e) => console.error('Video error:', e)}
                         >
                             <source
                                 src={`${getCdnBase()}/${currentVideo}`}
                                 type={(() => {
-                                    const ext = currentVideo ? currentVideo.match(/\.[^.]+$/)?.[0] : '.mp4';
+                                    const ext = currentVideo
+                                        ? currentVideo.match(/\.[^.]+$/)?.[0]
+                                        : '.mp4';
                                     return VIDEO_MIME_TYPES[ext] || 'video/mp4';
                                 })()}
                             />
                             <p className='video-fallback'>
                                 Your browser doesn&apos;t support HTML5 video.
-                                <a href={`${getCdnBase()}/${currentVideo}`}>Download the video</a> instead.
+                                <a href={`${getCdnBase()}/${currentVideo}`}>
+                                    Download the video
+                                </a>{' '}
+                                instead.
                             </p>
                         </video>
                     ) : (
                         <div className='video-placeholder'>
                             <div className='placeholder-content'>
-                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                <svg
+                                    width='64'
+                                    height='64'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <polygon points='5 3 19 12 5 21 5 3'></polygon>
                                 </svg>
                                 <h3>Ready to Learn</h3>
-                                <p>Select a lesson from the sidebar to start watching</p>
+                                <p>
+                                    Select a lesson from the sidebar to start
+                                    watching
+                                </p>
                             </div>
                         </div>
                     )}
