@@ -1320,6 +1320,143 @@ button {
 }
 
 /* Topic Section */
+.learning-playlist-panel {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.learning-playlist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.learning-playlist-header h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.learning-playlist-header span {
+    min-width: 24px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.learning-playlist-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.learning-playlist-item {
+    display: grid;
+    grid-template-columns: 24px 24px minmax(0, 1fr) 28px;
+    gap: 4px;
+    align-items: center;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.learning-playlist-item:hover {
+    background: var(--accent-subtle);
+    border-color: var(--border);
+}
+
+.playlist-item-copy {
+    min-width: 0;
+}
+
+.playlist-item-copy span,
+.playlist-item-copy small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.playlist-item-copy span {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.playlist-item-copy small {
+    margin-top: 1px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+}
+
+.learning-playlist-empty {
+    margin: 0;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.playlist-order-btn,
+.playlist-remove-btn,
+.modern-playlist-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 150ms ease;
+    flex-shrink: 0;
+}
+
+.playlist-order-btn {
+    width: 24px;
+    height: 24px;
+}
+
+.playlist-order-btn:hover:not(:disabled),
+.playlist-remove-btn:hover,
+.modern-playlist-btn:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.playlist-order-btn:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.modern-playlist-btn {
+    opacity: 0;
+}
+
+.modern-lesson-item:hover .modern-playlist-btn,
+.modern-playlist-btn.active {
+    opacity: 1;
+}
+
+.modern-playlist-btn.active {
+    color: var(--success);
+}
+
+.modern-playlist-btn.active:hover {
+    color: #fff;
+}
+
 .modern-topic-section {
     margin-bottom: 16px;
 }

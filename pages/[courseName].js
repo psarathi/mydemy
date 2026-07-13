@@ -5,9 +5,15 @@ import VideoPlayer from '../components/player/VideoPlayer';
 import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase } from '../constants';
 import {
     addToHistory,
+    addLessonToPlaylist,
     formatProgressTime,
+    getLearningPlaylist,
     getLessonProgress,
     getLessonProgressEntry,
+    getPlaylistLessonId,
+    isLessonInPlaylist,
+    movePlaylistLesson,
+    removeLessonFromPlaylist,
     saveLessonProgress,
 } from '../utils/courseTracking';
 import { useSession } from 'next-auth/react';
@@ -64,6 +70,7 @@ function CourseName({ courseName }) {
         return false;
     });
     const [lessonProgress, setLessonProgress] = useState({});
+    const [learningPlaylist, setLearningPlaylist] = useState([]);
     const activeElementRef = useRef(null);
     const getVideoFileNameAtGivenIndex = (index = 0) => {
         if (!videoFileList || !videoFileList.length) {
@@ -96,6 +103,7 @@ function CourseName({ courseName }) {
 
     const playSelectedVideo = (fileName) => {
         const index = videoFileList.indexOf(fileName);
+        if (index < 0) return;
         setVideoFile(videoFileList[index]);
         setSubtitlesFile(videoFileList[index].replace(/\.[^.]+$/, '.vtt'));
         setCurrentVideoFileIndex(index);
@@ -214,6 +222,56 @@ function CourseName({ courseName }) {
             : `${LOCAL_CDN}/${c.name}/${f.fileName}`;
     }
 
+    const updatePlaylistFromStorage = () => {
+        setLearningPlaylist(getLearningPlaylist());
+    };
+
+    const handleAddToPlaylist = (event, topicItem, file) => {
+        event.stopPropagation();
+        addLessonToPlaylist({
+            courseName,
+            topicName: topicItem.name,
+            lessonName: file.name,
+            filePath: getFileName(course, topicItem, file),
+        });
+    };
+
+    const handleRemoveFromPlaylist = (event, lessonId) => {
+        event.stopPropagation();
+        removeLessonFromPlaylist(lessonId);
+    };
+
+    const handleMovePlaylistLesson = (event, lessonId, direction) => {
+        event.stopPropagation();
+        movePlaylistLesson(lessonId, direction);
+    };
+
+    const playPlaylistItem = (item) => {
+        if (item.courseName === courseName) {
+            playSelectedVideo(item.filePath);
+            return;
+        }
+
+        const params = new URLSearchParams({
+            topic: item.topicName || '',
+            lesson: item.lessonName,
+        });
+        window.location.href = `/${encodeURIComponent(item.courseName)}?${params.toString()}`;
+    };
+
+    useEffect(() => {
+        updatePlaylistFromStorage();
+
+        const handlePlaylistUpdated = (event) => {
+            setLearningPlaylist(event.detail.playlist || getLearningPlaylist());
+        };
+
+        window.addEventListener('learningPlaylistUpdated', handlePlaylistUpdated);
+        return () => {
+            window.removeEventListener('learningPlaylistUpdated', handlePlaylistUpdated);
+        };
+    }, []);
+
     if (isLoading) {
         return (
             <div className='modern-course-container'>
@@ -289,6 +347,61 @@ function CourseName({ courseName }) {
                     </header>
 
                     <div className='modern-content-list'>
+                        <section className='learning-playlist-panel'>
+                            <div className='learning-playlist-header'>
+                                <h2>Playlist</h2>
+                                <span>{learningPlaylist.length}</span>
+                            </div>
+                            {learningPlaylist.length ? (
+                                <div className='learning-playlist-list'>
+                                    {learningPlaylist.map((item, index) => (
+                                        <div
+                                            key={item.id}
+                                            className='learning-playlist-item'
+                                            onClick={() => playPlaylistItem(item)}
+                                        >
+                                            <button
+                                                className='playlist-order-btn'
+                                                onClick={(event) => handleMovePlaylistLesson(event, item.id, 'up')}
+                                                disabled={index === 0}
+                                                aria-label={`Move ${item.lessonName} up`}
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                                </svg>
+                                            </button>
+                                            <button
+                                                className='playlist-order-btn'
+                                                onClick={(event) => handleMovePlaylistLesson(event, item.id, 'down')}
+                                                disabled={index === learningPlaylist.length - 1}
+                                                aria-label={`Move ${item.lessonName} down`}
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                                </svg>
+                                            </button>
+                                            <div className='playlist-item-copy'>
+                                                <span>{item.lessonName}</span>
+                                                <small>{item.courseName} / {item.topicName}</small>
+                                            </div>
+                                            <button
+                                                className='playlist-remove-btn'
+                                                onClick={(event) => handleRemoveFromPlaylist(event, item.id)}
+                                                aria-label={`Remove ${item.lessonName} from playlist`}
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className='learning-playlist-empty'>Queue lessons from any course.</p>
+                            )}
+                        </section>
+
                         {course.topics.map((topic, topicIndex) => (
                             <div key={topicIndex} className='modern-topic-section'>
                                 <div className='modern-topic-header'>
@@ -306,6 +419,13 @@ function CourseName({ courseName }) {
                                                 `${courseName}::${topic.name}::${file.name}`
                                             ];
                                             const isActive = getFileName(course, topic, file) === currentVideo;
+                                            const lessonId = getPlaylistLessonId(courseName, topic.name, file.name);
+                                            const inPlaylist = isLessonInPlaylist(
+                                                courseName,
+                                                topic.name,
+                                                file.name,
+                                                learningPlaylist
+                                            );
 
                                             return (
                                                 <div
@@ -347,6 +467,26 @@ function CourseName({ courseName }) {
                                                         )}
                                                     </div>
                                                 </div>
+                                                <button
+                                                    className={`modern-playlist-btn ${inPlaylist ? 'active' : ''}`}
+                                                    onClick={(event) => inPlaylist
+                                                        ? handleRemoveFromPlaylist(event, lessonId)
+                                                        : handleAddToPlaylist(event, topic, file)
+                                                    }
+                                                    aria-label={`${inPlaylist ? 'Remove' : 'Add'} ${file.name} ${inPlaylist ? 'from' : 'to'} playlist`}
+                                                    title={inPlaylist ? 'Remove from playlist' : 'Add to playlist'}
+                                                >
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        {inPlaylist ? (
+                                                            <path d="M20 6L9 17l-5-5"></path>
+                                                        ) : (
+                                                            <>
+                                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                            </>
+                                                        )}
+                                                    </svg>
+                                                </button>
                                                 <button
                                                     className='modern-copy-url-btn'
                                                     onClick={(event) =>

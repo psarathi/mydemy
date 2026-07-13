@@ -11,7 +11,13 @@ import {
     saveLessonProgress,
     getCourseProgressSummary,
     getLessonKey,
-    formatProgressTime
+    formatProgressTime,
+    addLessonToPlaylist,
+    getLearningPlaylist,
+    getPlaylistLessonId,
+    isLessonInPlaylist,
+    movePlaylistLesson,
+    removeLessonFromPlaylist
 } from '../../utils/courseTracking';
 
 // Mock localStorage
@@ -332,6 +338,110 @@ describe('courseTracking utilities', () => {
         });
     });
 
+    describe('learning playlist', () => {
+        const playlistItem = {
+            courseName: 'Progress Course',
+            topicName: 'Intro',
+            lessonName: 'Welcome',
+            filePath: 'courses/Progress Course/Intro/welcome.mp4',
+        };
+
+        test('adds a lesson to the playlist once', () => {
+            localStorageMock.getItem.mockReturnValue('[]');
+            const mockDate = new Date('2026-01-01T00:00:00.000Z');
+            jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+
+            const item = addLessonToPlaylist(playlistItem);
+
+            expect(item).toEqual({
+                id: getPlaylistLessonId('Progress Course', 'Intro', 'Welcome'),
+                ...playlistItem,
+                addedAt: '2026-01-01T00:00:00.000Z',
+            });
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'learningPlaylist',
+                JSON.stringify([item])
+            );
+            expect(mockDispatchEvent).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'learningPlaylistUpdated'
+                })
+            );
+
+            global.Date.mockRestore();
+        });
+
+        test('does not duplicate an existing playlist lesson', () => {
+            const existingItem = {
+                id: getPlaylistLessonId('Progress Course', 'Intro', 'Welcome'),
+                ...playlistItem,
+                addedAt: '2026-01-01T00:00:00.000Z',
+            };
+            localStorageMock.getItem.mockReturnValue(JSON.stringify([existingItem]));
+
+            expect(addLessonToPlaylist(playlistItem)).toEqual(existingItem);
+            expect(localStorageMock.setItem).not.toHaveBeenCalled();
+        });
+
+        test('removes a playlist lesson by id', () => {
+            const firstItem = {
+                id: 'first',
+                lessonName: 'First',
+            };
+            const secondItem = {
+                id: 'second',
+                lessonName: 'Second',
+            };
+            localStorageMock.getItem.mockReturnValue(JSON.stringify([firstItem, secondItem]));
+
+            const updatedPlaylist = removeLessonFromPlaylist('first');
+
+            expect(updatedPlaylist).toEqual([secondItem]);
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'learningPlaylist',
+                JSON.stringify([secondItem])
+            );
+        });
+
+        test('moves playlist lessons up and down', () => {
+            const playlist = [
+                {id: 'first', lessonName: 'First'},
+                {id: 'second', lessonName: 'Second'},
+                {id: 'third', lessonName: 'Third'},
+            ];
+            localStorageMock.getItem.mockReturnValue(JSON.stringify(playlist));
+
+            expect(movePlaylistLesson('second', 'up').map((item) => item.id)).toEqual([
+                'second',
+                'first',
+                'third',
+            ]);
+
+            localStorageMock.getItem.mockReturnValue(JSON.stringify(playlist));
+
+            expect(movePlaylistLesson('second', 'down').map((item) => item.id)).toEqual([
+                'first',
+                'third',
+                'second',
+            ]);
+        });
+
+        test('checks whether a lesson is already in the playlist', () => {
+            const playlist = [{
+                id: getPlaylistLessonId('Progress Course', 'Intro', 'Welcome'),
+            }];
+
+            expect(isLessonInPlaylist('Progress Course', 'Intro', 'Welcome', playlist)).toBe(true);
+            expect(isLessonInPlaylist('Progress Course', 'Intro', 'Setup', playlist)).toBe(false);
+        });
+
+        test('returns an empty playlist when localStorage has no queue', () => {
+            localStorageMock.getItem.mockReturnValue(null);
+
+            expect(getLearningPlaylist()).toEqual([]);
+        });
+    });
+
     describe('server-side rendering compatibility', () => {
         let originalWindow;
 
@@ -391,6 +501,12 @@ describe('courseTracking utilities', () => {
             const result = isFavorite('Test Course');
 
             expect(result).toBe(false);
+        });
+
+        test('getLearningPlaylist returns empty array when window is undefined', () => {
+            delete global.window;
+
+            expect(getLearningPlaylist()).toEqual([]);
         });
     });
 });
