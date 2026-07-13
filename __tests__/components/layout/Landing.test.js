@@ -9,19 +9,24 @@ import Landing from '../../../components/layout/Landing';
 
 // Mock Next.js components
 jest.mock('next/link', () => {
-    return function MockedLink({children, href}) {
-        return <a href={href}>{children}</a>;
+    return function MockedLink({children, href, passHref, ...props}) {
+        const resolvedHref =
+            typeof href === 'string'
+                ? href
+                : `${href.pathname}?${new URLSearchParams(href.query).toString()}`;
+        return <a href={resolvedHref} {...props}>{children}</a>;
     };
 });
 
 // Mock dependencies
 jest.mock('next-auth/react');
 jest.mock('../../../components/common/SwitchCheckbox', () => {
-    return function MockSwitchCheckbox({callback}) {
+    return function MockSwitchCheckbox({initialState, callback}) {
         return (
             <input 
                 type="checkbox" 
                 data-testid="switch-checkbox"
+                defaultChecked={initialState}
                 onChange={(e) => callback && callback(e.target.checked)}
             />
         );
@@ -47,23 +52,50 @@ jest.mock('../../../components/common/FavoriteButton', () => {
 });
 
 jest.mock('../../../utils/courseTracking', () => ({
-    addToHistory: jest.fn()
+    addToHistory: jest.fn(),
+    formatProgressTime: jest.fn(() => '00:10'),
+    getCourseProgressSummary: jest.fn(() => ({
+        completedLessons: 0,
+        totalLessons: 0,
+        percentComplete: 0,
+        activeLesson: null,
+    })),
+    getLessonProgress: jest.fn(() => ({})),
+}));
+
+jest.mock('../../../utils/tagging', () => ({
+    addTag: jest.fn(),
+    removeTag: jest.fn(),
+    getTags: jest.fn(() => []),
+    getTagCounts: jest.fn(() => []),
 }));
 
 // Mock courses data
-jest.mock('../../../courses.json', () => [
+const mockCourses = [
     {
         name: 'React Basics',
         topics: [
-            { name: 'Introduction', files: [] },
-            { name: 'Components', files: [] }
+            {
+                name: 'Introduction',
+                files: [{name: 'React overview.mp4', ext: '.mp4'}],
+            },
+            {
+                name: 'Components',
+                files: [{name: 'Component state.mp4', ext: '.mp4'}],
+            }
         ]
     },
     {
         name: 'JavaScript Advanced',
         topics: [
-            { name: 'Closures', files: [] },
-            { name: 'Async Programming', files: [] }
+            {
+                name: 'Closures',
+                files: [{name: 'Lexical scope.mp4', ext: '.mp4'}],
+            },
+            {
+                name: 'Async Programming',
+                files: [{name: 'Promise chaining.mp4', ext: '.mp4'}],
+            }
         ]
     },
     {
@@ -72,7 +104,15 @@ jest.mock('../../../courses.json', () => [
             { name: 'Getting Started', files: [] }
         ]
     }
-]);
+];
+
+jest.mock('../../../hooks/useCourses', () => ({
+    useCourses: jest.fn(() => ({
+        courses: mockCourses,
+        isLoading: false,
+        mutate: jest.fn(),
+    })),
+}));
 
 const mockUseSession = require('next-auth/react').useSession;
 const mockAddToHistory = require('../../../utils/courseTracking').addToHistory;
@@ -84,6 +124,7 @@ describe('Landing', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        window.localStorage.clear();
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
     });
 
@@ -92,7 +133,7 @@ describe('Landing', () => {
 
         expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
         expect(screen.getByTestId('hamburger-menu')).toBeInTheDocument();
-        expect(screen.getByTestId('switch-checkbox')).toBeInTheDocument();
+        expect(screen.getAllByTestId('switch-checkbox')).toHaveLength(2);
     });
 
     test('displays all courses by default', () => {
@@ -139,7 +180,7 @@ describe('Landing', () => {
         render(<Landing />);
 
         const searchInput = screen.getByPlaceholderText(/Search courses/i);
-        const exactToggle = screen.getByTestId('switch-checkbox');
+        const exactToggle = screen.getAllByTestId('switch-checkbox')[0];
 
         // Test partial match (default behavior)
         await user.type(searchInput, 'Java');
@@ -170,7 +211,7 @@ describe('Landing', () => {
     test('initializes with exact search enabled', () => {
         render(<Landing exact="true" />);
 
-        const exactToggle = screen.getByTestId('switch-checkbox');
+        const exactToggle = screen.getAllByTestId('switch-checkbox')[0];
         expect(exactToggle.checked).toBe(true);
     });
 
@@ -205,7 +246,7 @@ describe('Landing', () => {
     test('displays course topic count', () => {
         render(<Landing />);
 
-        expect(screen.getByText('2 topics')).toBeInTheDocument(); // React Basics
+        expect(screen.getAllByText('2 topics')).toHaveLength(2); // React Basics, JavaScript Advanced
         expect(screen.getByText('1 topics')).toBeInTheDocument(); // Node.js Fundamentals
     });
 
@@ -264,6 +305,29 @@ describe('Landing', () => {
             expect(screen.getByText('JavaScript Advanced')).toBeInTheDocument();
             expect(screen.queryByText('React Basics')).not.toBeInTheDocument();
         });
+    });
+
+    test('shows matched lesson jump results when searching lessons', async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        const searchInput = screen.getByPlaceholderText(/Search courses/i);
+        const lessonSearchToggle = screen.getAllByTestId('switch-checkbox')[1];
+
+        await user.click(lessonSearchToggle);
+        await user.type(searchInput, 'Promise');
+
+        await waitFor(() => {
+            expect(screen.getByText('JavaScript Advanced')).toBeInTheDocument();
+            expect(screen.getByText('1 matched lesson')).toBeInTheDocument();
+            expect(screen.getByText('Async Programming')).toBeInTheDocument();
+            expect(screen.getByText('Promise chaining.mp4')).toBeInTheDocument();
+        });
+
+        expect(screen.getByText('Promise chaining.mp4').closest('a')).toHaveAttribute(
+            'href',
+            'JavaScript Advanced?topic=Async+Programming&lesson=Promise+chaining.mp4'
+        );
     });
 
     test('cleans up event listeners on unmount', () => {
