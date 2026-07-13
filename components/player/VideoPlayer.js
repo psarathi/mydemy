@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {getCdnBase, VIDEO_MIME_TYPES} from '../../constants';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 
@@ -15,6 +15,8 @@ function VideoPlayer({
     seekToSeconds,
 }) {
     const vp = useRef(null);
+    const lastProgressReport = useRef(0);
+    const seekTarget = useRef({videoFile, startTime});
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
@@ -28,7 +30,7 @@ function VideoPlayer({
     // Mobile browsers reject play() when autoplay-with-audio is blocked
     // (NotAllowedError). Swallow that rejection so it doesn't surface as an
     // uncaught promise error; the native controls let the user start playback.
-    const safePlay = () => {
+    const safePlay = useCallback(() => {
         if (!vp.current) {
             return;
         }
@@ -36,9 +38,9 @@ function VideoPlayer({
         if (result && typeof result.catch === 'function') {
             result.catch(() => {});
         }
-    };
+    }, []);
 
-    const endHandler = (userSelected = false) => {
+    const endHandler = useCallback((userSelected = false) => {
         if (userSelected) {
             // User manually selected a video, play immediately
             setCurrentVideo(videoFile);
@@ -53,7 +55,7 @@ function VideoPlayer({
             setNextVideoInfo(nextVideo);
             setShowCountdown(true);
         }
-    };
+    }, [getNextVideo, safePlay, subtitlesFile, videoFile]);
 
     const playNextVideo = () => {
         if (nextVideoInfo) {
@@ -179,8 +181,10 @@ function VideoPlayer({
     useEffect(() => {
         setCurrentVideo(videoFile);
         setCurrentSubtitle(subtitlesFile);
+        seekTarget.current = {videoFile, startTime};
+        lastProgressReport.current = 0;
         endHandler(true);
-    }, [videoFile, subtitlesFile]);
+    }, [videoFile, subtitlesFile, startTime, endHandler]);
 
     useEffect(() => {
         if (vp.current && typeof seekToSeconds === 'number') {
@@ -199,20 +203,39 @@ function VideoPlayer({
                     .padStart(2, '0')})`
             );
         }
-        if (vp.current && startTime > 0 && vp.current.currentTime < 1) {
-            vp.current.currentTime = startTime;
+        const shouldSeek =
+            seekTarget.current.videoFile === videoFile &&
+            seekTarget.current.startTime > 0 &&
+            vp.current &&
+            vp.current.currentTime < 1;
+        if (shouldSeek) {
+            vp.current.currentTime = seekTarget.current.startTime;
         }
     };
 
-    const reportProgress = () => {
+    const reportProgress = useCallback((force = false) => {
         if (!vp.current || !onProgress) {
             return;
         }
+        const now = Date.now();
+        if (!force && now - lastProgressReport.current < 5000) {
+            return;
+        }
+        lastProgressReport.current = now;
         onProgress({
             currentTime: vp.current.currentTime,
             duration: vp.current.duration || 0,
         });
-    };
+    }, [onProgress]);
+
+    useEffect(() => {
+        const flushProgress = () => reportProgress(true);
+        window.addEventListener('beforeunload', flushProgress);
+        return () => {
+            window.removeEventListener('beforeunload', flushProgress);
+            flushProgress();
+        };
+    }, [reportProgress]);
 
     const getCurrentSeconds = () =>
         vp.current ? Math.floor(vp.current.currentTime || 0) : 0;
@@ -399,13 +422,16 @@ function VideoPlayer({
                             controls
                             autoPlay
                             onPlay={() => setIsPlaying(true)}
-                            onPause={() => setIsPlaying(false)}
+                            onPause={() => {
+                                setIsPlaying(false);
+                                reportProgress(true);
+                            }}
                             onTimeUpdate={handleTimeUpdate}
                             ref={vp}
                             onLoadStart={addTrack}
                             onLoadedMetadata={getVideoDuration}
                             onEnded={() => {
-                                reportProgress();
+                                reportProgress(true);
                                 endHandler();
                             }}
                             preload='metadata'
