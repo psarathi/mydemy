@@ -624,6 +624,77 @@ button {
     color: #fff;
 }
 
+.collection-dashboard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.collection-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.collection-summary strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.collection-summary-label {
+    color: var(--text-tertiary);
+    font-weight: 600;
+}
+
+.collection-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.collection-filter-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.collection-filter-pill,
+.course-collection-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-radius: 100px;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.collection-filter-pill {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.collection-filter-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.collection-filter-count {
+    font-size: 10px;
+    opacity: 0.72;
+}
+
 /* Courses Header */
 .courses-header {
     display: flex;
@@ -884,6 +955,17 @@ button {
     min-height: 0;
 }
 
+.course-collections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.course-collection-chip {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
 .course-card-actions {
     display: flex;
     gap: 6px;
@@ -903,6 +985,37 @@ button {
     font-size: 13px;
     outline: none;
     transition: all 150ms ease;
+}
+
+.collection-input {
+    flex: 1 1 120px;
+    min-width: 112px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+}
+
+.collection-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+    background: var(--bg);
+}
+
+.collection-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
 }
 
 .tag-input:focus {

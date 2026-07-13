@@ -8,9 +8,13 @@ import FavoriteButton from '../common/FavoriteButton';
 import TagButton from '../common/TagButton';
 import {
     addToHistory,
+    addCourseToCollection,
     formatProgressTime,
+    getCourseCollections,
     getCourseProgressSummary,
     getLessonProgress,
+    pinCourseCollection,
+    removeCourseFromCollection,
 } from '../../utils/courseTracking';
 import {addTag, removeTag, getTags, getTagCounts} from '../../utils/tagging';
 import {useSession} from 'next-auth/react';
@@ -39,6 +43,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [lessonProgress, setLessonProgress] = useState({});
     const [tagFilterMode, setTagFilterMode] = useState('OR');
     const [allTagCounts, setAllTagCounts] = useState([]);
+    const [collections, setCollections] = useState([]);
+    const [activeCollectionId, setActiveCollectionId] = useState('');
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
     const searchField = useRef(null);
@@ -93,6 +99,33 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         };
     }, []);
 
+    useEffect(() => {
+        setCollections(getCourseCollections());
+
+        const handleCollectionsUpdated = (event) => {
+            const nextCollections =
+                event.detail.collections || getCourseCollections();
+            setCollections(nextCollections);
+            setActiveCollectionId((current) =>
+                current &&
+                !nextCollections.some((collection) => collection.id === current)
+                    ? ''
+                    : current
+            );
+        };
+
+        window.addEventListener(
+            'courseCollectionsUpdated',
+            handleCollectionsUpdated
+        );
+        return () => {
+            window.removeEventListener(
+                'courseCollectionsUpdated',
+                handleCollectionsUpdated
+            );
+        };
+    }, []);
+
     // Autocomplete: show when typing # in search
     const autocompleteResults = React.useMemo(() => {
         if (!searchTerm.startsWith('#') || searchTerm === '#') {
@@ -144,6 +177,17 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             });
         }
 
+        if (activeCollectionId) {
+            const activeCollection = collections.find(
+                (collection) => collection.id === activeCollectionId
+            );
+            if (activeCollection) {
+                filtered = filtered.filter((course) =>
+                    activeCollection.courses.includes(course.name)
+                );
+            }
+        }
+
         // Step 2: Filter by search term
         if (searchTerm && !searchTerm.startsWith('#')) {
             let searchTermParts = searchTerm.trim().split(' ');
@@ -185,7 +229,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         }
 
         setCourseList(filtered);
-    }, [searchTerm, exactSearch, searchInLessons, courses, activeTags, tagFilterMode]);
+    }, [searchTerm, exactSearch, searchInLessons, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
 
     useEffect(() => {
         function handleTagClick(event) {
@@ -308,6 +352,16 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         courseList.forEach(course => {
             removeTag(course, tagValue);
         });
+    };
+
+    const pinnedCollection =
+        collections.find((collection) => collection.pinned) || collections[0];
+
+    const handleAddToCollection = (course, collectionName) => {
+        const saved = addCourseToCollection(collectionName, course.name);
+        if (saved) {
+            setActiveCollectionId(saved.id);
+        }
     };
 
     if (isLoading) {
@@ -467,6 +521,36 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                     </div>
                 )}
 
+                {collections.length > 0 && (
+                    <div className='collection-dashboard'>
+                        <div className='collection-summary'>
+                            <span className='collection-summary-label'>Pinned collection</span>
+                            <strong>{pinnedCollection.name}</strong>
+                            <span>{pinnedCollection.courses.length} courses</span>
+                        </div>
+                        <div className='collection-filter-bar'>
+                            <button
+                                className={`collection-filter-pill ${activeCollectionId === '' ? 'active' : ''}`}
+                                onClick={() => setActiveCollectionId('')}
+                            >
+                                All courses
+                            </button>
+                            {collections.map((collection) => (
+                                <button
+                                    key={collection.id}
+                                    className={`collection-filter-pill ${activeCollectionId === collection.id ? 'active' : ''}`}
+                                    onClick={() => setActiveCollectionId(collection.id)}
+                                    onDoubleClick={() => pinCourseCollection(collection.id)}
+                                    title='Double-click to pin'
+                                >
+                                    <span>{collection.name}</span>
+                                    <span className='collection-filter-count'>{collection.courses.length}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className='courses-header'>
                     <div>
                         <h1>Courses</h1>
@@ -577,6 +661,22 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         <TagButton key={tag} course={course} tag={tag} />
                                     ))}
                                 </div>
+                                {collections.some((collection) => collection.courses.includes(course.name)) && (
+                                    <div className='course-collections'>
+                                        {collections
+                                            .filter((collection) => collection.courses.includes(course.name))
+                                            .map((collection) => (
+                                                <button
+                                                    key={collection.id}
+                                                    className='course-collection-chip'
+                                                    onClick={() => setActiveCollectionId(collection.id)}
+                                                    type='button'
+                                                >
+                                                    {collection.name}
+                                                </button>
+                                            ))}
+                                    </div>
+                                )}
                             </div>
                             <div className='course-card-actions'>
                                 <FavoriteButton course={course} />
@@ -591,6 +691,39 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         }
                                     }}
                                 />
+                                <input
+                                    type='text'
+                                    className='collection-input'
+                                    placeholder='Add collection'
+                                    list='course-collection-names'
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleAddToCollection(course, e.target.value);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                {activeCollectionId &&
+                                    collections
+                                        .find((collection) => collection.id === activeCollectionId)
+                                        ?.courses.includes(course.name) && (
+                                        <button
+                                            className='collection-remove-btn'
+                                            aria-label={`Remove ${course.name} from active collection`}
+                                            type='button'
+                                            onClick={() =>
+                                                removeCourseFromCollection(
+                                                    activeCollectionId,
+                                                    course.name
+                                                )
+                                            }
+                                        >
+                                            <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                                                <line x1='18' y1='6' x2='6' y2='18'></line>
+                                                <line x1='6' y1='6' x2='18' y2='18'></line>
+                                            </svg>
+                                        </button>
+                                    )}
                                 <button
                                     className={`preview-btn ${course.name === previewCourse?.name ? 'active' : ''}`}
                                     aria-label={`Preview ${course.name}`}
@@ -606,6 +739,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                         );
                     })}
                 </div>
+                <datalist id='course-collection-names'>
+                    {collections.map((collection) => (
+                        <option key={collection.id} value={collection.name} />
+                    ))}
+                </datalist>
             </div>
             
             {mobilePreviewOpen && <div className='mobile-preview-overlay' onClick={closeMobilePreview} />}

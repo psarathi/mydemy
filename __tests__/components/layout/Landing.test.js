@@ -9,19 +9,20 @@ import Landing from '../../../components/layout/Landing';
 
 // Mock Next.js components
 jest.mock('next/link', () => {
-    return function MockedLink({children, href}) {
-        return <a href={href}>{children}</a>;
+    return function MockedLink({children, href, ...props}) {
+        return <a href={typeof href === 'string' ? href : href.pathname} {...props}>{children}</a>;
     };
 });
 
 // Mock dependencies
 jest.mock('next-auth/react');
 jest.mock('../../../components/common/SwitchCheckbox', () => {
-    return function MockSwitchCheckbox({callback}) {
+    return function MockSwitchCheckbox({initialState, callback}) {
         return (
             <input 
                 type="checkbox" 
                 data-testid="switch-checkbox"
+                defaultChecked={initialState}
                 onChange={(e) => callback && callback(e.target.checked)}
             />
         );
@@ -47,11 +48,22 @@ jest.mock('../../../components/common/FavoriteButton', () => {
 });
 
 jest.mock('../../../utils/courseTracking', () => ({
-    addToHistory: jest.fn()
+    addToHistory: jest.fn(),
+    addCourseToCollection: jest.fn(),
+    formatProgressTime: jest.fn(() => '0:00'),
+    getCourseCollections: jest.fn(() => []),
+    getCourseProgressSummary: jest.fn(() => ({
+        completedLessons: 0,
+        totalLessons: 0,
+        percentComplete: 0,
+        activeLesson: null,
+    })),
+    getLessonProgress: jest.fn(() => ({})),
+    pinCourseCollection: jest.fn(),
+    removeCourseFromCollection: jest.fn(),
 }));
 
-// Mock courses data
-jest.mock('../../../courses.json', () => [
+const mockCourses = [
     {
         name: 'React Basics',
         topics: [
@@ -72,7 +84,15 @@ jest.mock('../../../courses.json', () => [
             { name: 'Getting Started', files: [] }
         ]
     }
-]);
+];
+
+jest.mock('../../../hooks/useCourses', () => ({
+    useCourses: jest.fn(() => ({
+        courses: mockCourses,
+        isLoading: false,
+        mutate: jest.fn(),
+    })),
+}));
 
 const mockUseSession = require('next-auth/react').useSession;
 const mockAddToHistory = require('../../../utils/courseTracking').addToHistory;
@@ -84,6 +104,7 @@ describe('Landing', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        localStorage.clear();
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
     });
 
@@ -92,7 +113,7 @@ describe('Landing', () => {
 
         expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
         expect(screen.getByTestId('hamburger-menu')).toBeInTheDocument();
-        expect(screen.getByTestId('switch-checkbox')).toBeInTheDocument();
+        expect(screen.getAllByTestId('switch-checkbox')).toHaveLength(2);
     });
 
     test('displays all courses by default', () => {
@@ -139,7 +160,7 @@ describe('Landing', () => {
         render(<Landing />);
 
         const searchInput = screen.getByPlaceholderText(/Search courses/i);
-        const exactToggle = screen.getByTestId('switch-checkbox');
+        const exactToggle = screen.getAllByTestId('switch-checkbox')[0];
 
         // Test partial match (default behavior)
         await user.type(searchInput, 'Java');
@@ -170,7 +191,7 @@ describe('Landing', () => {
     test('initializes with exact search enabled', () => {
         render(<Landing exact="true" />);
 
-        const exactToggle = screen.getByTestId('switch-checkbox');
+        const exactToggle = screen.getAllByTestId('switch-checkbox')[0];
         expect(exactToggle.checked).toBe(true);
     });
 
@@ -205,7 +226,7 @@ describe('Landing', () => {
     test('displays course topic count', () => {
         render(<Landing />);
 
-        expect(screen.getByText('2 topics')).toBeInTheDocument(); // React Basics
+        expect(screen.getAllByText('2 topics')).toHaveLength(2);
         expect(screen.getByText('1 topics')).toBeInTheDocument(); // Node.js Fundamentals
     });
 
