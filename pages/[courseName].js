@@ -1,37 +1,42 @@
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import React, { useEffect, useState, useRef } from 'react';
+import {useSearchParams} from 'next/navigation';
+import React, {useEffect, useState, useRef} from 'react';
 import VideoPlayer from '../components/player/VideoPlayer';
-import { LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase } from '../constants';
+import {LOCAL_CDN, SUPPORTED_VIDEO_EXTENSIONS, getCdnBase} from '../constants';
 import {
     addToHistory,
     addLessonToPlaylist,
+    deleteLessonAnnotation,
     formatProgressTime,
+    getCourseProgressSummary,
+    getCourseResumeUrl,
     getLearningPlaylist,
+    getLessonAnnotations,
     getLessonProgress,
     getLessonProgressEntry,
     getPlaylistLessonId,
     isLessonInPlaylist,
     movePlaylistLesson,
     removeLessonFromPlaylist,
+    saveLessonAnnotation,
     saveLessonProgress,
 } from '../utils/courseTracking';
-import { useSession } from 'next-auth/react';
-import { useCourses } from '../hooks/useCourses';
+import {useSession} from 'next-auth/react';
+import {useCourses} from '../hooks/useCourses';
 
-function CourseName({ courseName }) {
+function CourseName({courseName}) {
     const searchParams = useSearchParams();
     const topic = searchParams.get('topic');
     const lesson = searchParams.get('lesson');
-    const { courses, isLoading } = useCourses();
+    const {courses, isLoading} = useCourses();
     const course = courses.find((c) => c.name === courseName);
-    const { data: session } = useSession();
+    const {data: session} = useSession();
     const videoFileList = course
         ? course.topics.flatMap((t) => {
-            return t.files
-                .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
-                .map((f) => getFileName(course, t, f));
-        })
+              return t.files
+                  .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
+                  .map((f) => getFileName(course, t, f));
+          })
         : [];
     const getVideoFileIndex = (topic, lesson) => {
         let lessonFileName;
@@ -84,6 +89,10 @@ function CourseName({ courseName }) {
     const [currentVideo, setCurrentVideo] = useState(
         getVideoFileNameAtGivenIndex(currentVideoFileIndex)
     );
+    const [annotations, setAnnotations] = useState([]);
+    const [annotationFilter, setAnnotationFilter] = useState('all');
+    const [noteDraft, setNoteDraft] = useState(null);
+    const [seekTarget, setSeekTarget] = useState(null);
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
             (currentVideoFileIndex) => currentVideoFileIndex + 1
@@ -140,6 +149,13 @@ function CourseName({ courseName }) {
             activeLessonMeta.lessonName
         )
         : null;
+    const courseProgressSummary = getCourseProgressSummary(course, lessonProgress);
+    const resumeLesson = courseProgressSummary.activeLesson;
+    const showContinueButton =
+        resumeLesson &&
+        activeLessonMeta &&
+        (resumeLesson.topicName !== activeLessonMeta.topicName ||
+            resumeLesson.lessonName !== activeLessonMeta.lessonName);
 
     const handleVideoProgress = ({currentTime, duration}) => {
         if (!activeLessonMeta) return;
@@ -178,11 +194,20 @@ function CourseName({ courseName }) {
             if (activeElementRef.current) {
                 activeElementRef.current.scrollIntoView({
                     behavior: 'smooth',
-                    block: 'center'
+                    block: 'center',
                 });
             }
         }, 100);
     }, [currentVideoFileIndex, course]);
+
+    useEffect(() => {
+        if (courseName && currentVideo) {
+            setAnnotations(getLessonAnnotations(courseName, currentVideo));
+        } else {
+            setAnnotations([]);
+        }
+        setNoteDraft(null);
+    }, [courseName, currentVideo]);
 
     useEffect(() => {
         setLessonProgress(getLessonProgress());
@@ -191,9 +216,15 @@ function CourseName({ courseName }) {
             setLessonProgress(event.detail.progress || getLessonProgress());
         };
 
-        window.addEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+        window.addEventListener(
+            'lessonProgressUpdated',
+            handleLessonProgressUpdated
+        );
         return () => {
-            window.removeEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
+            window.removeEventListener(
+                'lessonProgressUpdated',
+                handleLessonProgressUpdated
+            );
         };
     }, []);
 
@@ -272,26 +303,93 @@ function CourseName({ courseName }) {
         };
     }, []);
 
+    const formatTimestamp = (seconds) => {
+        const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+        const minutes = Math.floor(safeSeconds / 60);
+        return `${minutes}:${String(safeSeconds % 60).padStart(2, '0')}`;
+    };
+
+    const refreshAnnotations = () => {
+        setAnnotations(getLessonAnnotations(courseName, currentVideo));
+    };
+
+    const saveAnnotation = (annotation) => {
+        saveLessonAnnotation(courseName, currentVideo, annotation);
+        refreshAnnotations();
+    };
+
+    const captureBookmark = (timeSeconds) => {
+        saveAnnotation({
+            type: 'bookmark',
+            timeSeconds,
+            text: `Bookmark at ${formatTimestamp(timeSeconds)}`,
+        });
+    };
+
+    const captureNote = (timeSeconds) => {
+        setNoteDraft({type: 'note', timeSeconds, text: ''});
+    };
+
+    const submitNote = (event) => {
+        event.preventDefault();
+        if (!noteDraft || !noteDraft.text.trim()) {
+            return;
+        }
+        saveAnnotation({
+            ...noteDraft,
+            text: noteDraft.text.trim(),
+        });
+        setNoteDraft(null);
+    };
+
+    const removeAnnotation = (annotationId) => {
+        deleteLessonAnnotation(courseName, currentVideo, annotationId);
+        refreshAnnotations();
+    };
+
+    const seekToAnnotation = (annotation) => {
+        setSeekTarget({
+            seconds: annotation.timeSeconds,
+            id: `${annotation.id}-${Date.now()}`,
+        });
+    };
+
+    const visibleAnnotations = annotations.filter(
+        (annotation) =>
+            annotationFilter === 'all' || annotation.type === annotationFilter
+    );
+
     if (isLoading) {
         return (
             <div className='modern-course-container'>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '400px',
-                    flexDirection: 'column',
-                    gap: '16px'
-                }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        border: '4px solid rgba(0, 0, 0, 0.1)',
-                        borderTop: '4px solid #007bff',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                    }} />
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading course...</p>
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        minHeight: '400px',
+                        flexDirection: 'column',
+                        gap: '16px',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '4px solid rgba(0, 0, 0, 0.1)',
+                            borderTop: '4px solid #007bff',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                        }}
+                    />
+                    <p
+                        style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: '14px',
+                        }}
+                    >
+                        Loading course...
+                    </p>
                 </div>
             </div>
         );
@@ -299,47 +397,109 @@ function CourseName({ courseName }) {
 
     return course ? (
         <div className='modern-course-container'>
-            <div className={`modern-course-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <div
+                className={`modern-course-layout ${
+                    isSidebarCollapsed ? 'sidebar-collapsed' : ''
+                }`}
+            >
                 {isSidebarCollapsed && (
-                    <button className='modern-open-sidebar-btn' onClick={openSidebar} aria-label="Open sidebar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
+                    <button
+                        className='modern-open-sidebar-btn'
+                        onClick={openSidebar}
+                        aria-label='Open sidebar'
+                    >
+                        <svg
+                            width='20'
+                            height='20'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                        >
+                            <polyline points='9 18 15 12 9 6'></polyline>
                         </svg>
                     </button>
                 )}
 
-                <aside className={`modern-sidebar ${isSidebarCollapsed ? 'hidden' : ''}`}>
+                <aside
+                    className={`modern-sidebar ${
+                        isSidebarCollapsed ? 'hidden' : ''
+                    }`}
+                >
                     <header className='modern-course-header'>
                         <div className='modern-nav-controls'>
                             <Link href='/' className='modern-back-btn'>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                <svg
+                                    width='16'
+                                    height='16'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <polyline points='15 18 9 12 15 6'></polyline>
                                 </svg>
                                 <span>All Courses</span>
                             </Link>
                             <button
                                 className='modern-collapse-btn'
                                 onClick={collapseSideBar}
-                                aria-label="Collapse sidebar"
+                                aria-label='Collapse sidebar'
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                <svg
+                                    width='16'
+                                    height='16'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <polyline points='15 18 9 12 15 6'></polyline>
                                 </svg>
                             </button>
                         </div>
                         <h1 className='modern-course-title'>{courseName}</h1>
+                        {showContinueButton && (
+                            <Link
+                                href={getCourseResumeUrl(courseName, resumeLesson)}
+                                className='course-continue-link'
+                            >
+                                Continue {resumeLesson.lessonName} at {formatProgressTime(resumeLesson.currentTime)}
+                            </Link>
+                        )}
                         <div className='course-stats'>
                             <span className='stat-item'>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                <svg
+                                    width='14'
+                                    height='14'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <path d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'></path>
+                                    <path d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'></path>
                                 </svg>
                                 {course.topics.length} Topics
                             </span>
                             <span className='stat-item'>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                <svg
+                                    width='14'
+                                    height='14'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <polygon points='23 7 16 12 23 17 23 7'></polygon>
+                                    <rect
+                                        x='1'
+                                        y='5'
+                                        width='15'
+                                        height='14'
+                                        rx='2'
+                                        ry='2'
+                                    ></rect>
                                 </svg>
                                 {videoFileList.length} Lessons
                             </span>
@@ -403,23 +563,48 @@ function CourseName({ courseName }) {
                         </section>
 
                         {course.topics.map((topic, topicIndex) => (
-                            <div key={topicIndex} className='modern-topic-section'>
+                            <div
+                                key={topicIndex}
+                                className='modern-topic-section'
+                            >
                                 <div className='modern-topic-header'>
                                     <h3>{topic.name}</h3>
                                     <span className='topic-lesson-count'>
-                                        {topic.files.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length} lessons
+                                        {
+                                            topic.files.filter((f) =>
+                                                SUPPORTED_VIDEO_EXTENSIONS.includes(
+                                                    f.ext
+                                                )
+                                            ).length
+                                        }{' '}
+                                        lessons
                                     </span>
                                 </div>
 
                                 <div className='modern-lessons-list'>
                                     {topic.files
-                                        .filter((f) => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext))
+                                        .filter((f) =>
+                                            SUPPORTED_VIDEO_EXTENSIONS.includes(
+                                                f.ext
+                                            )
+                                        )
                                         .map((file, fileIndex) => {
-                                            const lessonEntry = lessonProgress[
-                                                `${courseName}::${topic.name}::${file.name}`
-                                            ];
-                                            const isActive = getFileName(course, topic, file) === currentVideo;
-                                            const lessonId = getPlaylistLessonId(courseName, topic.name, file.name);
+                                            const lessonEntry =
+                                                lessonProgress[
+                                                    `${courseName}::${topic.name}::${file.name}`
+                                                ];
+                                            const lessonFileName = getFileName(
+                                                course,
+                                                topic,
+                                                file
+                                            );
+                                            const isActive =
+                                                lessonFileName === currentVideo;
+                                            const lessonId = getPlaylistLessonId(
+                                                courseName,
+                                                topic.name,
+                                                file.name
+                                            );
                                             const inPlaylist = isLessonInPlaylist(
                                                 courseName,
                                                 topic.name,
@@ -430,41 +615,94 @@ function CourseName({ courseName }) {
                                             return (
                                                 <div
                                                     key={fileIndex}
-                                                    ref={isActive ? activeElementRef : null}
-                                                    className={`modern-lesson-item ${isActive ? 'active' : ''
-                                                        } ${lessonEntry?.completed ? 'completed' : ''}`}
+                                                    ref={
+                                                        isActive
+                                                            ? activeElementRef
+                                                            : null
+                                                    }
+                                                    className={`modern-lesson-item ${
+                                                        isActive ? 'active' : ''
+                                                    } ${
+                                                        lessonEntry?.completed
+                                                            ? 'completed'
+                                                            : ''
+                                                    }`}
                                                     onClick={() =>
                                                         playSelectedVideo(
-                                                            getFileName(course, topic, file)
+                                                            lessonFileName
                                                         )
                                                     }
                                                 >
                                                 <div className='lesson-content'>
                                                     <div className='lesson-play-icon'>
                                                         {lessonEntry?.completed ? (
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <path d="M20 6L9 17l-5-5"></path>
+                                                            <svg
+                                                                width='16'
+                                                                height='16'
+                                                                viewBox='0 0 24 24'
+                                                                fill='none'
+                                                                stroke='currentColor'
+                                                                strokeWidth='2'
+                                                            >
+                                                                <path d='M20 6L9 17l-5-5'></path>
                                                             </svg>
                                                         ) : isActive ? (
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <rect x="6" y="4" width="4" height="16"></rect>
-                                                                <rect x="14" y="4" width="4" height="16"></rect>
+                                                            <svg
+                                                                width='16'
+                                                                height='16'
+                                                                viewBox='0 0 24 24'
+                                                                fill='none'
+                                                                stroke='currentColor'
+                                                                strokeWidth='2'
+                                                            >
+                                                                <rect
+                                                                    x='6'
+                                                                    y='4'
+                                                                    width='4'
+                                                                    height='16'
+                                                                ></rect>
+                                                                <rect
+                                                                    x='14'
+                                                                    y='4'
+                                                                    width='4'
+                                                                    height='16'
+                                                                ></rect>
                                                             </svg>
                                                         ) : (
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                            <svg
+                                                                width='16'
+                                                                height='16'
+                                                                viewBox='0 0 24 24'
+                                                                fill='none'
+                                                                stroke='currentColor'
+                                                                strokeWidth='2'
+                                                            >
+                                                                <polygon points='5 3 19 12 5 21 5 3'></polygon>
                                                             </svg>
                                                         )}
                                                     </div>
                                                     <div className='lesson-info'>
-                                                        <span className='lesson-name'>{file.name}</span>
+                                                        <span className='lesson-name'>
+                                                            {file.name}
+                                                        </span>
                                                         {lessonEntry && (
                                                             <span className='lesson-progress-status'>
                                                                 {lessonEntry.completed
                                                                     ? 'Complete'
-                                                                    : `Started ${formatProgressTime(lessonEntry.currentTime)}`}
+                                                                    : `Started ${formatProgressTime(
+                                                                          lessonEntry.currentTime
+                                                                      )}`}
                                                             </span>
                                                         )}
+                                                        {isActive &&
+                                                            annotations.length > 0 && (
+                                                                <span className='lesson-annotation-count'>
+                                                                    {
+                                                                        annotations.length
+                                                                    }{' '}
+                                                                    saved
+                                                                </span>
+                                                            )}
                                                     </div>
                                                 </div>
                                                 <button
@@ -492,14 +730,25 @@ function CourseName({ courseName }) {
                                                     onClick={(event) =>
                                                         copyVideoURL(
                                                             event,
-                                                            getFileName(course, topic, file)
+                                                            getFileName(
+                                                                course,
+                                                                topic,
+                                                                file
+                                                            )
                                                         )
                                                     }
                                                     aria-label={`Copy URL for ${file.name}`}
                                                 >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                                    <svg
+                                                        width='14'
+                                                        height='14'
+                                                        viewBox='0 0 24 24'
+                                                        fill='none'
+                                                        stroke='currentColor'
+                                                        strokeWidth='2'
+                                                    >
+                                                        <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'></path>
+                                                        <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'></path>
                                                     </svg>
                                                 </button>
                                             </div>
@@ -509,6 +758,108 @@ function CourseName({ courseName }) {
                             </div>
                         ))}
                     </div>
+                    <section className='lesson-annotations-panel'>
+                        <div className='annotations-header'>
+                            <h3>Annotations</h3>
+                            <span>{annotations.length}</span>
+                        </div>
+                        <div className='annotation-tabs'>
+                            {['all', 'note', 'bookmark'].map((filter) => (
+                                <button
+                                    key={filter}
+                                    className={
+                                        annotationFilter === filter
+                                            ? 'active'
+                                            : ''
+                                    }
+                                    onClick={() => setAnnotationFilter(filter)}
+                                    type='button'
+                                >
+                                    {filter === 'all'
+                                        ? 'All'
+                                        : `${filter[0].toUpperCase()}${filter.slice(
+                                              1
+                                          )}s`}
+                                </button>
+                            ))}
+                        </div>
+                        {noteDraft && (
+                            <form
+                                className='annotation-note-form'
+                                onSubmit={submitNote}
+                            >
+                                <label htmlFor='annotation-note-text'>
+                                    Note at{' '}
+                                    {formatTimestamp(noteDraft.timeSeconds)}
+                                </label>
+                                <textarea
+                                    id='annotation-note-text'
+                                    value={noteDraft.text}
+                                    onChange={(event) =>
+                                        setNoteDraft({
+                                            ...noteDraft,
+                                            text: event.target.value,
+                                        })
+                                    }
+                                    rows={3}
+                                    autoFocus
+                                />
+                                <div className='annotation-form-actions'>
+                                    <button
+                                        type='button'
+                                        onClick={() => setNoteDraft(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button type='submit'>Save</button>
+                                </div>
+                            </form>
+                        )}
+                        {visibleAnnotations.length > 0 ? (
+                            <div className='annotations-list'>
+                                {visibleAnnotations.map((annotation) => (
+                                    <div
+                                        key={annotation.id}
+                                        className='annotation-row'
+                                    >
+                                        <button
+                                            type='button'
+                                            className='annotation-time'
+                                            onClick={() =>
+                                                seekToAnnotation(annotation)
+                                            }
+                                        >
+                                            {formatTimestamp(
+                                                annotation.timeSeconds
+                                            )}
+                                        </button>
+                                        <div className='annotation-body'>
+                                            <span className='annotation-type'>
+                                                {annotation.type === 'note'
+                                                    ? 'Note'
+                                                    : 'Bookmark'}
+                                            </span>
+                                            <p>{annotation.text}</p>
+                                        </div>
+                                        <button
+                                            type='button'
+                                            className='annotation-delete'
+                                            onClick={() =>
+                                                removeAnnotation(annotation.id)
+                                            }
+                                            aria-label='Delete annotation'
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className='annotations-empty'>
+                                No saved annotations for this lesson.
+                            </p>
+                        )}
+                    </section>
                 </aside>
 
                 <main className='modern-video-section'>
@@ -518,6 +869,9 @@ function CourseName({ courseName }) {
                         getNextVideo={getNextVideo}
                         startTime={activeLessonProgress?.currentTime || 0}
                         onProgress={handleVideoProgress}
+                        onCaptureBookmark={captureBookmark}
+                        onCaptureNote={captureNote}
+                        seekToSeconds={seekTarget?.seconds}
                     />
                 </main>
             </div>
@@ -525,16 +879,30 @@ function CourseName({ courseName }) {
     ) : (
         <div className='course-not-found'>
             <div className='not-found-content'>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="m9 9 6 6"></path>
-                    <path d="m15 9-6 6"></path>
+                <svg
+                    width='48'
+                    height='48'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='currentColor'
+                    strokeWidth='2'
+                >
+                    <circle cx='12' cy='12' r='10'></circle>
+                    <path d='m9 9 6 6'></path>
+                    <path d='m15 9-6 6'></path>
                 </svg>
                 <h2>Course Not Found</h2>
                 <p>The course &quot;{courseName}&quot; could not be found.</p>
-                <Link href="/" className='back-to-home-btn'>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
+                <Link href='/' className='back-to-home-btn'>
+                    <svg
+                        width='16'
+                        height='16'
+                        viewBox='0 0 24 24'
+                        fill='none'
+                        stroke='currentColor'
+                        strokeWidth='2'
+                    >
+                        <polyline points='15 18 9 12 15 6'></polyline>
                     </svg>
                     Back to All Courses
                 </Link>
@@ -545,7 +913,7 @@ function CourseName({ courseName }) {
 
 export default CourseName;
 
-export async function getStaticProps({ params: { courseName } }) {
+export async function getStaticProps({params: {courseName}}) {
     const staticExport = process.env.TAURI_BUILD === 'true';
 
     return {
@@ -553,7 +921,7 @@ export async function getStaticProps({ params: { courseName } }) {
             courseName,
         },
         // ISR is not compatible with static export
-        ...(staticExport ? {} : { revalidate: 3600 * 24 }),
+        ...(staticExport ? {} : {revalidate: 3600 * 24}),
     };
 }
 
@@ -566,7 +934,9 @@ export async function getStaticPaths() {
     try {
         courses = require('../courses.json');
     } catch (err) {
-        console.warn('courses.json not found at build time; generating paths on demand');
+        console.warn(
+            'courses.json not found at build time; generating paths on demand'
+        );
     }
     return {
         paths: courses.map((c) => ({
