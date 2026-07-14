@@ -1819,12 +1819,35 @@ button {
     z-index: 1000;
     transition: left 200ms ease;
     overflow-y: auto;
+    scrollbar-color: transparent transparent;
+    scrollbar-width: thin;
     box-shadow: var(--shadow-lg);
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .hamburger-sidebar.open {
     left: 0;
+}
+
+.hamburger-sidebar.scrolling {
+    scrollbar-color: var(--text-tertiary) transparent;
+}
+
+.hamburger-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hamburger-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.hamburger-sidebar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.hamburger-sidebar.scrolling::-webkit-scrollbar-thumb {
+    background: var(--text-tertiary);
 }
 
 .hamburger-header {
