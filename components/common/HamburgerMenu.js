@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useRef, useState, useEffect} from 'react';
 import {useSession} from 'next-auth/react';
 import Link from 'next/link';
 import AuthButton from './AuthButton';
@@ -8,6 +8,7 @@ import { addToHistory } from '../../utils/courseTracking';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isMenuScrolling, setIsMenuScrolling] = useState(false);
     const [viewHistory, setViewHistory] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [uniqueTags, setUniqueTags] = useState([]);
@@ -15,6 +16,7 @@ export default function HamburgerMenu() {
     const [refreshState, setRefreshState] = useState('idle');
     const [refreshError, setRefreshError] = useState('');
     const {data: session} = useSession();
+    const scrollIdleTimerRef = useRef(null);
 
     useEffect(() => {
         // Load data from localStorage
@@ -76,6 +78,29 @@ export default function HamburgerMenu() {
         setIsOpen(false);
     };
 
+    const handleMenuScroll = () => {
+        setIsMenuScrolling(true);
+        if (scrollIdleTimerRef.current) {
+            clearTimeout(scrollIdleTimerRef.current);
+        }
+        scrollIdleTimerRef.current = setTimeout(() => {
+            setIsMenuScrolling(false);
+        }, 700);
+    };
+
+    useEffect(() => {
+        if (!isOpen) {
+            setIsMenuScrolling(false);
+        }
+
+        return () => {
+            if (scrollIdleTimerRef.current) {
+                clearTimeout(scrollIdleTimerRef.current);
+                scrollIdleTimerRef.current = null;
+            }
+        };
+    }, [isOpen]);
+
     const handleRefreshCourses = async () => {
         // Once done, the button doubles as a "reload the page" action.
         if (refreshState === 'done') {
@@ -123,7 +148,12 @@ export default function HamburgerMenu() {
             )}
 
             {/* Sidebar Menu */}
-            <div className={`hamburger-sidebar ${isOpen ? 'open' : ''}`}>
+            <div
+                className={`hamburger-sidebar ${isOpen ? 'open' : ''} ${
+                    isMenuScrolling ? 'scrolling' : ''
+                }`}
+                onScroll={handleMenuScroll}
+            >
                 <div className="hamburger-header">
                     <button 
                         className="hamburger-close"
