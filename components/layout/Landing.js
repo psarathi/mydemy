@@ -11,6 +11,7 @@ import {
     addCourseToCollection,
     formatProgressTime,
     getCourseCollections,
+    getCourseResumeUrl,
     getCourseProgressSummary,
     getLessonProgress,
     pinCourseCollection,
@@ -641,13 +642,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         <div className='course-progress-meta'>
                                             <span>{progressSummary.percentComplete}% complete</span>
                                             <Link
-                                                href={{
-                                                    pathname: course.name,
-                                                    query: {
-                                                        topic: progressSummary.activeLesson.topicName,
-                                                        lesson: progressSummary.activeLesson.lessonName,
-                                                    },
-                                                }}
+                                                href={getCourseResumeUrl(course.name, progressSummary.activeLesson)}
                                                 className='course-resume-link'
                                                 onClick={() => handleCourseClick(course)}
                                             >

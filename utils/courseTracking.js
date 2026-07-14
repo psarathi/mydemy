@@ -1,5 +1,6 @@
 // Course tracking utilities
-const LESSON_PROGRESS_KEY = 'lessonProgress';
+const LEGACY_LESSON_PROGRESS_KEY = 'lessonProgress';
+const LESSON_PROGRESS_KEY = 'mydemyLessonProgress:v1';
 const ANNOTATIONS_KEY = 'mydemyLessonAnnotations:v1';
 const COURSE_COLLECTIONS_KEY = 'mydemyCourseCollections:v1';
 
@@ -115,7 +116,12 @@ export const isFavorite = (courseName) => {
 };
 
 export const getLessonProgress = () => {
-    return readJsonObject(LESSON_PROGRESS_KEY);
+    const progress = readJsonObject(LESSON_PROGRESS_KEY);
+    if (Object.keys(progress).length > 0 || typeof window === 'undefined') {
+        return progress;
+    }
+
+    return readJsonObject(LEGACY_LESSON_PROGRESS_KEY);
 };
 
 export const getLessonProgressEntry = (courseName, topicName, lessonName) => {
@@ -145,6 +151,7 @@ export const saveLessonProgress = ({
     const completionThreshold = normalizedDuration
         ? Math.min(normalizedDuration * 0.9, normalizedDuration - 30)
         : Infinity;
+    const existingEntry = progress[key] || {};
 
     const entry = {
         courseName,
@@ -152,7 +159,7 @@ export const saveLessonProgress = ({
         lessonName,
         currentTime: Math.round(normalizedTime),
         duration: Math.round(normalizedDuration),
-        completed: normalizedTime >= completionThreshold,
+        completed: existingEntry.completed || normalizedTime >= completionThreshold,
         updatedAt: new Date().toISOString(),
     };
 
@@ -199,6 +206,18 @@ export const getCourseProgressSummary = (course, progressOverride = null) => {
             ? Math.round((completedLessons / lessons.length) * 100)
             : 0,
         activeLesson,
+    };
+};
+
+export const getCourseResumeUrl = (courseName, activeLesson) => {
+    if (!courseName || !activeLesson) return `/${courseName || ''}`;
+
+    return {
+        pathname: `/${courseName}`,
+        query: {
+            topic: activeLesson.topicName,
+            lesson: activeLesson.lessonName,
+        },
     };
 };
 

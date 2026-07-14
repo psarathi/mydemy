@@ -7,6 +7,8 @@ import {
     addToHistory,
     deleteLessonAnnotation,
     formatProgressTime,
+    getCourseProgressSummary,
+    getCourseResumeUrl,
     getLessonAnnotations,
     getLessonProgress,
     getLessonProgressEntry,
@@ -139,6 +141,13 @@ function CourseName({courseName}) {
             activeLessonMeta.lessonName
         )
         : null;
+    const courseProgressSummary = getCourseProgressSummary(course, lessonProgress);
+    const resumeLesson = courseProgressSummary.activeLesson;
+    const showContinueButton =
+        resumeLesson &&
+        activeLessonMeta &&
+        (resumeLesson.topicName !== activeLessonMeta.topicName ||
+            resumeLesson.lessonName !== activeLessonMeta.lessonName);
 
     const handleVideoProgress = ({currentTime, duration}) => {
         if (!activeLessonMeta) return;
@@ -392,6 +401,14 @@ function CourseName({courseName}) {
                             </button>
                         </div>
                         <h1 className='modern-course-title'>{courseName}</h1>
+                        {showContinueButton && (
+                            <Link
+                                href={getCourseResumeUrl(courseName, resumeLesson)}
+                                className='course-continue-link'
+                            >
+                                Continue {resumeLesson.lessonName} at {formatProgressTime(resumeLesson.currentTime)}
+                            </Link>
+                        )}
                         <div className='course-stats'>
                             <span className='stat-item'>
                                 <svg
