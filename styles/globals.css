@@ -875,6 +875,52 @@ button {
     white-space: nowrap;
 }
 
+.course-lesson-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+
+.course-lesson-matches-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.course-lesson-match-link {
+    display: grid;
+    grid-template-columns: minmax(72px, 0.45fr) minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    color: var(--text);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.course-lesson-match-link:hover {
+    color: var(--accent);
+}
+
+.course-lesson-match-topic,
+.course-lesson-match-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.course-lesson-match-topic {
+    color: var(--text-secondary);
+}
+
+.course-lesson-match-name {
+    font-weight: 600;
+}
+
 .course-tags {
     display: flex;
     flex-wrap: wrap;
