@@ -188,6 +188,73 @@ button {
     color: var(--text-tertiary);
 }
 
+.auth-stack,
+.pin-auth-panel,
+.pin-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-stack {
+    width: 100%;
+}
+
+.pin-auth-panel {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.pin-auth-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.pin-auth-form {
+    gap: 8px;
+}
+
+.pin-auth-form input,
+.pin-auth-form select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.pin-auth-form--admin {
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.pin-auth-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.pin-auth-checkbox input {
+    width: auto;
+}
+
+.pin-auth-error {
+    font-size: 12px;
+    color: var(--error);
+}
+
 /* --------------------------------------------------------------------------
    5. Sign-in Page
    -------------------------------------------------------------------------- */

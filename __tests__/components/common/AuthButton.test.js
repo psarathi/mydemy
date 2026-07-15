@@ -42,10 +42,10 @@ describe('AuthButton', () => {
 
         render(<AuthButton />);
 
-        const signInButton = screen.getByRole('button');
-        expect(signInButton).toHaveTextContent('Sign in');
+        const signInButton = screen.getByRole('button', {name: 'Continue with OAuth'});
         expect(signInButton).toHaveClass('auth-btn--signin');
         expect(signInButton).not.toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Create admin'})).toBeInTheDocument();
     });
 
     test('calls signIn when sign in button is clicked', async () => {
@@ -57,7 +57,7 @@ describe('AuthButton', () => {
         const user = userEvent.setup();
         render(<AuthButton />);
 
-        const signInButton = screen.getByRole('button');
+        const signInButton = screen.getByRole('button', {name: 'Continue with OAuth'});
         await user.click(signInButton);
 
         expect(mockSignIn).toHaveBeenCalledTimes(1);
@@ -81,7 +81,7 @@ describe('AuthButton', () => {
 
         expect(screen.getByText('John Doe')).toBeInTheDocument();
         expect(screen.getByText('john@example.com')).toBeInTheDocument();
-        expect(screen.getByRole('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
+        expect(screen.getByRole('img').getAttribute('src')).toContain(encodeURIComponent('https://example.com/avatar.jpg'));
         expect(screen.getByRole('img')).toHaveAttribute('alt', 'John Doe');
         
         const signOutButton = screen.getByText('Sign out');
@@ -148,7 +148,7 @@ describe('AuthButton', () => {
         });
 
         rerender(<AuthButton />);
-        expect(screen.getByRole('button')).toHaveClass('auth-btn', 'auth-btn--signin');
+        expect(screen.getByRole('button', {name: 'Continue with OAuth'})).toHaveClass('auth-btn', 'auth-btn--signin');
 
         // Test authenticated state
         mockUseSession.mockReturnValue({
