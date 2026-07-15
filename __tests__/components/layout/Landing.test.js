@@ -9,8 +9,12 @@ import Landing from '../../../components/layout/Landing';
 
 // Mock Next.js components
 jest.mock('next/link', () => {
-    return function MockedLink({children, href, ...props}) {
-        return <a href={typeof href === 'string' ? href : href.pathname} {...props}>{children}</a>;
+    return function MockedLink({children, href, passHref, ...props}) {
+        const resolvedHref =
+            typeof href === 'string'
+                ? href
+                : `${href.pathname}?${new URLSearchParams(href.query).toString()}`;
+        return <a href={resolvedHref} {...props}>{children}</a>;
     };
 });
 
@@ -63,19 +67,39 @@ jest.mock('../../../utils/courseTracking', () => ({
     removeCourseFromCollection: jest.fn(),
 }));
 
+jest.mock('../../../utils/tagging', () => ({
+    addTag: jest.fn(),
+    removeTag: jest.fn(),
+    getTags: jest.fn(() => []),
+    getTagCounts: jest.fn(() => []),
+}));
+
+// Mock courses data
 const mockCourses = [
     {
         name: 'React Basics',
         topics: [
-            { name: 'Introduction', files: [] },
-            { name: 'Components', files: [] }
+            {
+                name: 'Introduction',
+                files: [{name: 'React overview.mp4', ext: '.mp4'}],
+            },
+            {
+                name: 'Components',
+                files: [{name: 'Component state.mp4', ext: '.mp4'}],
+            }
         ]
     },
     {
         name: 'JavaScript Advanced',
         topics: [
-            { name: 'Closures', files: [] },
-            { name: 'Async Programming', files: [] }
+            {
+                name: 'Closures',
+                files: [{name: 'Lexical scope.mp4', ext: '.mp4'}],
+            },
+            {
+                name: 'Async Programming',
+                files: [{name: 'Promise chaining.mp4', ext: '.mp4'}],
+            }
         ]
     },
     {
@@ -104,7 +128,7 @@ describe('Landing', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        localStorage.clear();
+        window.localStorage.clear();
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
     });
 
@@ -226,7 +250,7 @@ describe('Landing', () => {
     test('displays course topic count', () => {
         render(<Landing />);
 
-        expect(screen.getAllByText('2 topics')).toHaveLength(2);
+        expect(screen.getAllByText('2 topics')).toHaveLength(2); // React Basics, JavaScript Advanced
         expect(screen.getByText('1 topics')).toBeInTheDocument(); // Node.js Fundamentals
     });
 
@@ -285,6 +309,29 @@ describe('Landing', () => {
             expect(screen.getByText('JavaScript Advanced')).toBeInTheDocument();
             expect(screen.queryByText('React Basics')).not.toBeInTheDocument();
         });
+    });
+
+    test('shows matched lesson jump results when searching lessons', async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        const searchInput = screen.getByPlaceholderText(/Search courses/i);
+        const lessonSearchToggle = screen.getAllByTestId('switch-checkbox')[1];
+
+        await user.click(lessonSearchToggle);
+        await user.type(searchInput, 'Promise');
+
+        await waitFor(() => {
+            expect(screen.getByText('JavaScript Advanced')).toBeInTheDocument();
+            expect(screen.getByText('1 matched lesson')).toBeInTheDocument();
+            expect(screen.getByText('Async Programming')).toBeInTheDocument();
+            expect(screen.getByText('Promise chaining.mp4')).toBeInTheDocument();
+        });
+
+        expect(screen.getByText('Promise chaining.mp4').closest('a')).toHaveAttribute(
+            'href',
+            'JavaScript Advanced?topic=Async+Programming&lesson=Promise+chaining.mp4'
+        );
     });
 
     test('cleans up event listeners on unmount', () => {

@@ -1,4 +1,5 @@
 // Course tracking utilities
+const LEARNING_PLAYLIST_KEY = 'learningPlaylist';
 const LEGACY_LESSON_PROGRESS_KEY = 'lessonProgress';
 const LESSON_PROGRESS_KEY = 'mydemyLessonProgress:v1';
 const ANNOTATIONS_KEY = 'mydemyLessonAnnotations:v1';
@@ -315,6 +316,78 @@ export const pinCourseCollection = (collectionId) => {
 
     writeCollectionsStore(collections);
     return collections;
+};
+
+const writeLearningPlaylist = (playlist) => {
+    localStorage.setItem(LEARNING_PLAYLIST_KEY, JSON.stringify(playlist));
+    window.dispatchEvent(new CustomEvent('learningPlaylistUpdated', {
+        detail: {playlist}
+    }));
+};
+
+export const getLearningPlaylist = () => {
+    return readJsonArray(LEARNING_PLAYLIST_KEY);
+};
+
+export const getPlaylistLessonId = (courseName, topicName, lessonName) =>
+    getLessonKey(courseName, topicName, lessonName);
+
+export const isLessonInPlaylist = (courseName, topicName, lessonName, playlistOverride = null) => {
+    const playlist = playlistOverride || getLearningPlaylist();
+    const lessonId = getPlaylistLessonId(courseName, topicName, lessonName);
+    return playlist.some((item) => item.id === lessonId);
+};
+
+export const addLessonToPlaylist = ({courseName, topicName, lessonName, filePath}) => {
+    if (typeof window === 'undefined' || !courseName || !lessonName) return null;
+
+    const playlist = getLearningPlaylist();
+    const lessonId = getPlaylistLessonId(courseName, topicName, lessonName);
+    const existingItem = playlist.find((item) => item.id === lessonId);
+
+    if (existingItem) {
+        return existingItem;
+    }
+
+    const item = {
+        id: lessonId,
+        courseName,
+        topicName,
+        lessonName,
+        filePath,
+        addedAt: new Date().toISOString(),
+    };
+
+    writeLearningPlaylist([...playlist, item]);
+    return item;
+};
+
+export const removeLessonFromPlaylist = (lessonId) => {
+    if (typeof window === 'undefined' || !lessonId) return [];
+
+    const playlist = getLearningPlaylist();
+    const updatedPlaylist = playlist.filter((item) => item.id !== lessonId);
+    writeLearningPlaylist(updatedPlaylist);
+    return updatedPlaylist;
+};
+
+export const movePlaylistLesson = (lessonId, direction) => {
+    if (typeof window === 'undefined' || !lessonId) return [];
+
+    const playlist = getLearningPlaylist();
+    const currentIndex = playlist.findIndex((item) => item.id === lessonId);
+    const offset = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
+    const nextIndex = currentIndex + offset;
+
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= playlist.length) {
+        return playlist;
+    }
+
+    const updatedPlaylist = [...playlist];
+    const [item] = updatedPlaylist.splice(currentIndex, 1);
+    updatedPlaylist.splice(nextIndex, 0, item);
+    writeLearningPlaylist(updatedPlaylist);
+    return updatedPlaylist;
 };
 
 export const getLessonAnnotationKey = (courseName, lessonPath) =>

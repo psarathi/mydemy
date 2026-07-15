@@ -22,6 +22,41 @@ import {useSession} from 'next-auth/react';
 import {SUPPORTED_VIDEO_EXTENSIONS} from '../../constants';
 import {useCourses} from '../../hooks/useCourses';
 
+const getSearchTermParts = (searchTerm) =>
+    searchTerm
+        .trim()
+        .split(' ')
+        .filter(Boolean);
+
+const textMatchesSearchParts = (text = '', searchTermParts, exactSearch) => {
+    const normalizedText = text.toLowerCase();
+
+    return !exactSearch
+        ? searchTermParts.some((p) => normalizedText.indexOf(p.toLowerCase()) !== -1)
+        : searchTermParts.every((p) =>
+              normalizedText.split(' ').includes(p.toLowerCase())
+          );
+};
+
+const getMatchingLessonsForCourse = (course, searchTermParts, exactSearch) => {
+    if (!searchTermParts.length) {
+        return [];
+    }
+
+    return (course.topics || []).flatMap((topic) =>
+        (topic.files || [])
+            .filter(
+                (file) =>
+                    SUPPORTED_VIDEO_EXTENSIONS.includes(file.ext) &&
+                    textMatchesSearchParts(file.name, searchTermParts, exactSearch)
+            )
+            .map((file) => ({
+                topicName: topic.name,
+                lessonName: file.name,
+            }))
+    );
+};
+
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
 
@@ -52,6 +87,31 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const autocompleteRef = useRef(null);
     const {data: session} = useSession();
     const {courses, isLoading, mutate} = useCourses();
+
+    const searchTermParts = React.useMemo(
+        () => getSearchTermParts(searchTerm),
+        [searchTerm]
+    );
+
+    const lessonSearchMatches = React.useMemo(() => {
+        if (!searchInLessons || !searchTerm || searchTerm.startsWith('#')) {
+            return {};
+        }
+
+        return courses.reduce((matches, course) => {
+            const matchingLessons = getMatchingLessonsForCourse(
+                course,
+                searchTermParts,
+                exactSearch
+            );
+
+            if (matchingLessons.length > 0) {
+                matches[course.name] = matchingLessons;
+            }
+
+            return matches;
+        }, {});
+    }, [courses, exactSearch, searchInLessons, searchTerm, searchTermParts]);
 
     // Expose refresh function to parent
     useEffect(() => {
@@ -191,31 +251,17 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
 
         // Step 2: Filter by search term
         if (searchTerm && !searchTerm.startsWith('#')) {
-            let searchTermParts = searchTerm.trim().split(' ');
-
             filtered = filtered.filter(c => {
-                const courseNameMatch = !exactSearch
-                    ? searchTermParts.some(
-                          (p) => c.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
-                      )
-                    : searchTermParts.every((p) =>
-                          c.name.toLowerCase().split(' ').includes(p.toLowerCase())
-                      );
+                const courseNameMatch = textMatchesSearchParts(
+                    c.name,
+                    searchTermParts,
+                    exactSearch
+                );
 
                 // If searching in lessons, also check lesson names
                 if (searchInLessons && !courseNameMatch) {
-                    const hasMatchingLesson = c.topics?.some((topic) =>
-                        topic.files?.some((file) =>
-                            !exactSearch
-                                ? searchTermParts.some(
-                                      (p) => file.name.toLowerCase().indexOf(p.toLowerCase()) !== -1
-                                  )
-                                : searchTermParts.every((p) =>
-                                      file.name.toLowerCase().split(' ').includes(p.toLowerCase())
-                                  )
-                        )
-                    );
-                    return hasMatchingLesson;
+                    return getMatchingLessonsForCourse(c, searchTermParts, exactSearch)
+                        .length > 0;
                 }
 
                 return courseNameMatch;
@@ -230,7 +276,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         }
 
         setCourseList(filtered);
-    }, [searchTerm, exactSearch, searchInLessons, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
+    }, [searchTerm, searchTermParts, exactSearch, searchInLessons, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
 
     useEffect(() => {
         function handleTagClick(event) {
@@ -607,6 +653,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                 <div className='courses-grid'>
                     {courseList.map((course, i) => {
                         const progressSummary = getCourseProgressSummary(course, lessonProgress);
+                        const matchingLessons = lessonSearchMatches[course.name] || [];
 
                         return (
                             <div
@@ -649,6 +696,31 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                                 Resume {formatProgressTime(progressSummary.activeLesson.currentTime)}
                                             </Link>
                                         </div>
+                                    </div>
+                                )}
+                                {matchingLessons.length > 0 && (
+                                    <div className='course-lesson-matches'>
+                                        <div className='course-lesson-matches-header'>
+                                            {matchingLessons.length} matched {matchingLessons.length === 1 ? 'lesson' : 'lessons'}
+                                        </div>
+                                        {matchingLessons.slice(0, 3).map((match) => (
+                                            <Link
+                                                key={`${match.topicName}-${match.lessonName}`}
+                                                passHref
+                                                href={{
+                                                    pathname: course.name,
+                                                    query: {
+                                                        topic: match.topicName,
+                                                        lesson: match.lessonName,
+                                                    },
+                                                }}
+                                                className='course-lesson-match-link'
+                                                onClick={() => handleCourseClick(course)}
+                                            >
+                                                <span className='course-lesson-match-topic'>{match.topicName}</span>
+                                                <span className='course-lesson-match-name'>{match.lessonName}</span>
+                                            </Link>
+                                        ))}
                                     </div>
                                 )}
                                 <div className='course-tags'>
