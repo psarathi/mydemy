@@ -16,6 +16,11 @@ import {
     getCourseResumeUrl,
     getLessonKey,
     formatProgressTime,
+    getCourseCollections,
+    saveCourseCollection,
+    addCourseToCollection,
+    removeCourseFromCollection,
+    pinCourseCollection,
     addLessonToPlaylist,
     getLearningPlaylist,
     getPlaylistLessonId,
@@ -160,6 +165,99 @@ describe('courseTracking utilities', () => {
             expect(localStorageMock.getItem).toHaveBeenCalledWith(
                 'courseHistory'
             );
+        });
+    });
+
+    describe('course collections', () => {
+        test('creates a pinned first collection with unique courses', () => {
+            localStorageMock.getItem.mockReturnValue('[]');
+
+            const saved = saveCourseCollection(' Current Focus ', [
+                'React Basics',
+                'React Basics',
+                'Node.js Fundamentals',
+            ]);
+
+            expect(saved.name).toBe('Current Focus');
+            expect(saved.pinned).toBe(true);
+            expect(saved.courses).toEqual([
+                'React Basics',
+                'Node.js Fundamentals',
+            ]);
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'mydemyCourseCollections:v1',
+                expect.stringContaining('Current Focus')
+            );
+        });
+
+        test('adds a course to an existing collection without duplicates', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify([
+                    {
+                        id: 'focus',
+                        name: 'Focus',
+                        courses: ['React Basics'],
+                        pinned: true,
+                    },
+                ])
+            );
+
+            const saved = addCourseToCollection('Focus', 'React Basics');
+
+            expect(saved.courses).toEqual(['React Basics']);
+        });
+
+        test('removes a course from a collection', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify([
+                    {
+                        id: 'focus',
+                        name: 'Focus',
+                        courses: ['React Basics', 'Node.js Fundamentals'],
+                        pinned: true,
+                    },
+                ])
+            );
+
+            const collections = removeCourseFromCollection(
+                'focus',
+                'React Basics'
+            );
+
+            expect(collections[0].courses).toEqual(['Node.js Fundamentals']);
+        });
+
+        test('pins one collection at a time', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify([
+                    {
+                        id: 'focus',
+                        name: 'Focus',
+                        courses: [],
+                        pinned: true,
+                    },
+                    {
+                        id: 'work',
+                        name: 'Work',
+                        courses: [],
+                        pinned: false,
+                    },
+                ])
+            );
+
+            const collections = pinCourseCollection('work');
+
+            expect(collections.find((collection) => collection.id === 'work').pinned).toBe(true);
+            expect(collections.find((collection) => collection.id === 'focus').pinned).toBe(false);
+        });
+
+        test('returns empty collections on the server', () => {
+            const originalWindow = global.window;
+            delete global.window;
+
+            expect(getCourseCollections()).toEqual([]);
+
+            global.window = originalWindow;
         });
     });
 

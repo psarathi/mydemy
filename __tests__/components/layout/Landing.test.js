@@ -53,7 +53,9 @@ jest.mock('../../../components/common/FavoriteButton', () => {
 
 jest.mock('../../../utils/courseTracking', () => ({
     addToHistory: jest.fn(),
-    formatProgressTime: jest.fn(() => '00:10'),
+    addCourseToCollection: jest.fn(),
+    formatProgressTime: jest.fn(() => '0:00'),
+    getCourseCollections: jest.fn(() => []),
     getCourseProgressSummary: jest.fn(() => ({
         completedLessons: 0,
         totalLessons: 0,
@@ -61,6 +63,8 @@ jest.mock('../../../utils/courseTracking', () => ({
         activeLesson: null,
     })),
     getLessonProgress: jest.fn(() => ({})),
+    pinCourseCollection: jest.fn(),
+    removeCourseFromCollection: jest.fn(),
 }));
 
 jest.mock('../../../utils/tagging', () => ({

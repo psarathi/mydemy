@@ -3,6 +3,7 @@ const LEARNING_PLAYLIST_KEY = 'learningPlaylist';
 const LEGACY_LESSON_PROGRESS_KEY = 'lessonProgress';
 const LESSON_PROGRESS_KEY = 'mydemyLessonProgress:v1';
 const ANNOTATIONS_KEY = 'mydemyLessonAnnotations:v1';
+const COURSE_COLLECTIONS_KEY = 'mydemyCourseCollections:v1';
 
 const readJsonArray = (key) => {
     if (typeof window === 'undefined') return [];
@@ -30,6 +31,19 @@ const writeAnnotationStore = (store) => {
     window.dispatchEvent(
         new CustomEvent('lessonAnnotationsUpdated', {
             detail: {annotations: store},
+        })
+    );
+};
+
+const normalizeCollectionName = (name = '') => name.trim().replace(/\s+/g, ' ');
+
+const readCollectionsStore = () => readJsonArray(COURSE_COLLECTIONS_KEY);
+
+const writeCollectionsStore = (collections) => {
+    localStorage.setItem(COURSE_COLLECTIONS_KEY, JSON.stringify(collections));
+    window.dispatchEvent(
+        new CustomEvent('courseCollectionsUpdated', {
+            detail: {collections},
         })
     );
 };
@@ -213,6 +227,95 @@ export const formatProgressTime = (seconds = 0) => {
     const minutes = Math.floor(safeSeconds / 60);
     const remainder = `${safeSeconds % 60}`.padStart(2, '0');
     return `${minutes}:${remainder}`;
+};
+
+export const getCourseCollections = () => {
+    return readCollectionsStore()
+        .filter((collection) => collection?.name)
+        .map((collection) => ({
+            ...collection,
+            courses: Array.isArray(collection.courses) ? collection.courses : [],
+        }))
+        .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+};
+
+export const saveCourseCollection = (name, courseNames = []) => {
+    if (typeof window === 'undefined') return null;
+
+    const normalizedName = normalizeCollectionName(name);
+    if (!normalizedName) return null;
+
+    const collections = getCourseCollections();
+    const existing = collections.find(
+        (collection) =>
+            collection.name.toLowerCase() === normalizedName.toLowerCase()
+    );
+    const uniqueCourses = [...new Set(courseNames.filter(Boolean))];
+    const now = new Date().toISOString();
+    const saved = {
+        id: existing?.id || `${Date.now()}-${normalizedName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        name: normalizedName,
+        courses: uniqueCourses,
+        pinned: existing?.pinned || collections.length === 0,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+    };
+    const nextCollections = [
+        saved,
+        ...collections.filter((collection) => collection.id !== saved.id),
+    ];
+
+    writeCollectionsStore(nextCollections);
+    return saved;
+};
+
+export const addCourseToCollection = (collectionName, courseName) => {
+    if (typeof window === 'undefined' || !courseName) return null;
+
+    const collections = getCourseCollections();
+    const normalizedName = normalizeCollectionName(collectionName);
+    const existing = collections.find(
+        (collection) =>
+            collection.name.toLowerCase() === normalizedName.toLowerCase()
+    );
+    const nextCourses = existing
+        ? [...new Set([...existing.courses, courseName])]
+        : [courseName];
+
+    return saveCourseCollection(normalizedName, nextCourses);
+};
+
+export const removeCourseFromCollection = (collectionId, courseName) => {
+    if (typeof window === 'undefined') return [];
+
+    const collections = getCourseCollections().map((collection) =>
+        collection.id === collectionId
+            ? {
+                  ...collection,
+                  courses: collection.courses.filter((name) => name !== courseName),
+                  updatedAt: new Date().toISOString(),
+              }
+            : collection
+    );
+
+    writeCollectionsStore(collections);
+    return collections;
+};
+
+export const pinCourseCollection = (collectionId) => {
+    if (typeof window === 'undefined') return [];
+
+    const collections = getCourseCollections().map((collection) => ({
+        ...collection,
+        pinned: collection.id === collectionId,
+        updatedAt:
+            collection.id === collectionId
+                ? new Date().toISOString()
+                : collection.updatedAt,
+    }));
+
+    writeCollectionsStore(collections);
+    return collections;
 };
 
 const writeLearningPlaylist = (playlist) => {
