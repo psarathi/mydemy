@@ -4,7 +4,7 @@ import Link from 'next/link';
 import AuthButton from './AuthButton';
 import TagList from './TagList';
 import { getUniqueTags } from '../../utils/tagging';
-import { addToHistory } from '../../utils/courseTracking';
+import { addToHistory, clearHistory, getFavorites, getHistory, toggleFavorite } from '../../utils/courseTracking';
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -19,13 +19,13 @@ export default function HamburgerMenu() {
     const scrollIdleTimerRef = useRef(null);
 
     useEffect(() => {
-        // Load data from localStorage
-        const history = JSON.parse(localStorage.getItem('courseHistory') || '[]');
-        const favs = JSON.parse(localStorage.getItem('courseFavorites') || '[]');
-        const tags = getUniqueTags();
-        setViewHistory(history);
-        setFavorites(favs);
-        setUniqueTags(tags);
+        const loadActivity = () => {
+            setViewHistory(getHistory());
+            setFavorites(getFavorites());
+            setUniqueTags(getUniqueTags());
+        };
+
+        loadActivity();
 
         // Listen for updates
         const handleHistoryUpdate = (event) => {
@@ -43,26 +43,23 @@ export default function HamburgerMenu() {
         window.addEventListener('courseHistoryUpdated', handleHistoryUpdate);
         window.addEventListener('courseFavoritesUpdated', handleFavoritesUpdate);
         window.addEventListener('courseTagsUpdated', handleTagsUpdate);
+        window.addEventListener('activePinUserUpdated', loadActivity);
 
         return () => {
             window.removeEventListener('courseHistoryUpdated', handleHistoryUpdate);
             window.removeEventListener('courseFavoritesUpdated', handleFavoritesUpdate);
             window.removeEventListener('courseTagsUpdated', handleTagsUpdate);
+            window.removeEventListener('activePinUserUpdated', loadActivity);
         };
     }, []);
 
     const handleToggleFavorite = (course) => {
-        const newFavorites = favorites.some(fav => fav.name === course.name)
-            ? favorites.filter(fav => fav.name !== course.name)
-            : [...favorites, course];
-
-        setFavorites(newFavorites);
-        localStorage.setItem('courseFavorites', JSON.stringify(newFavorites));
+        toggleFavorite(course, session);
     };
 
-    const clearHistory = () => {
+    const handleClearHistory = () => {
         setViewHistory([]);
-        localStorage.removeItem('courseHistory');
+        clearHistory();
     };
 
     const handleTagClick = (tag) => {
@@ -279,7 +276,7 @@ export default function HamburgerMenu() {
                             {viewHistory.length > 0 && (
                                 <button
                                     className="clear-btn"
-                                    onClick={clearHistory}
+                                    onClick={handleClearHistory}
                                     title="Clear history"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

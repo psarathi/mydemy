@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { SessionProvider } from 'next-auth/react';
+import { LearnerProvider } from '../contexts/LearnerContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -14,15 +15,17 @@ function App({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>
       <ThemeProvider>
-        <Head>
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, viewport-fit=cover"
-          />
-        </Head>
-        <div className={inter.className}>
-          <Component {...pageProps} />
-        </div>
+        <LearnerProvider>
+          <Head>
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1, viewport-fit=cover"
+            />
+          </Head>
+          <div className={inter.className}>
+            <Component {...pageProps} />
+          </div>
+        </LearnerProvider>
       </ThemeProvider>
     </SessionProvider>
   );

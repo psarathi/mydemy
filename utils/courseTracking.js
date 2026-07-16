@@ -1,4 +1,6 @@
 // Course tracking utilities
+import {getUserScopedStorageKey} from './pinAuth';
+
 const LEARNING_PLAYLIST_KEY = 'learningPlaylist';
 const LEGACY_LESSON_PROGRESS_KEY = 'lessonProgress';
 const LESSON_PROGRESS_KEY = 'mydemyLessonProgress:v1';
@@ -7,16 +9,16 @@ const COURSE_COLLECTIONS_KEY = 'mydemyCourseCollections:v1';
 
 const readJsonArray = (key) => {
     if (typeof window === 'undefined') return [];
-    return JSON.parse(localStorage.getItem(key) || '[]');
+    return JSON.parse(localStorage.getItem(getUserScopedStorageKey(key)) || '[]');
 };
 
 const readJsonObject = (key) => {
     if (typeof window === 'undefined') return {};
-    return JSON.parse(localStorage.getItem(key) || '{}');
+    return JSON.parse(localStorage.getItem(getUserScopedStorageKey(key)) || '{}');
 };
 
 const writeLessonProgress = (progress) => {
-    localStorage.setItem(LESSON_PROGRESS_KEY, JSON.stringify(progress));
+    localStorage.setItem(getUserScopedStorageKey(LESSON_PROGRESS_KEY), JSON.stringify(progress));
     window.dispatchEvent(
         new CustomEvent('lessonProgressUpdated', {
             detail: {progress},
@@ -27,7 +29,7 @@ const writeLessonProgress = (progress) => {
 const readAnnotationStore = () => readJsonObject(ANNOTATIONS_KEY);
 
 const writeAnnotationStore = (store) => {
-    localStorage.setItem(ANNOTATIONS_KEY, JSON.stringify(store));
+    localStorage.setItem(getUserScopedStorageKey(ANNOTATIONS_KEY), JSON.stringify(store));
     window.dispatchEvent(
         new CustomEvent('lessonAnnotationsUpdated', {
             detail: {annotations: store},
@@ -65,7 +67,7 @@ export const addToHistory = (course, session = null) => {
     ];
     const trimmedHistory = newHistory.slice(0, 50);
 
-    localStorage.setItem('courseHistory', JSON.stringify(trimmedHistory));
+    localStorage.setItem(getUserScopedStorageKey('courseHistory'), JSON.stringify(trimmedHistory));
     window.dispatchEvent(
         new CustomEvent('courseHistoryUpdated', {
             detail: {course, history: trimmedHistory},
@@ -75,6 +77,16 @@ export const addToHistory = (course, session = null) => {
 
 export const getHistory = () => {
     return readJsonArray('courseHistory');
+};
+
+export const clearHistory = () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(getUserScopedStorageKey('courseHistory'));
+    window.dispatchEvent(
+        new CustomEvent('courseHistoryUpdated', {
+            detail: {history: []},
+        })
+    );
 };
 
 export const toggleFavorite = (course, session = null) => {
@@ -96,7 +108,7 @@ export const toggleFavorite = (course, session = null) => {
         ];
     }
 
-    localStorage.setItem('courseFavorites', JSON.stringify(newFavorites));
+    localStorage.setItem(getUserScopedStorageKey('courseFavorites'), JSON.stringify(newFavorites));
     window.dispatchEvent(
         new CustomEvent('courseFavoritesUpdated', {
             detail: {course, favorites: newFavorites, isFavorite: !isFavorite},
@@ -319,7 +331,7 @@ export const pinCourseCollection = (collectionId) => {
 };
 
 const writeLearningPlaylist = (playlist) => {
-    localStorage.setItem(LEARNING_PLAYLIST_KEY, JSON.stringify(playlist));
+    localStorage.setItem(getUserScopedStorageKey(LEARNING_PLAYLIST_KEY), JSON.stringify(playlist));
     window.dispatchEvent(new CustomEvent('learningPlaylistUpdated', {
         detail: {playlist}
     }));
