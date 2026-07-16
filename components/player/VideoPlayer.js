@@ -17,6 +17,8 @@ function VideoPlayer({
     const vp = useRef(null);
     const lastProgressReport = useRef(0);
     const seekTarget = useRef({videoFile, startTime});
+    const startTimeRef = useRef(startTime);
+    const onProgressRef = useRef(onProgress);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
@@ -179,19 +181,27 @@ function VideoPlayer({
     }, []);
 
     useEffect(() => {
+        onProgressRef.current = onProgress;
+    }, [onProgress]);
+
+    useEffect(() => {
+        startTimeRef.current = startTime;
+    }, [startTime]);
+
+    useEffect(() => {
         setCurrentVideo(videoFile);
         setCurrentSubtitle(subtitlesFile);
-        seekTarget.current = {videoFile, startTime};
+        seekTarget.current = {videoFile, startTime: startTimeRef.current};
         lastProgressReport.current = 0;
         endHandler(true);
-    }, [videoFile, subtitlesFile, startTime, endHandler]);
+    }, [videoFile, subtitlesFile, endHandler]);
 
     useEffect(() => {
         if (vp.current && typeof seekToSeconds === 'number') {
             vp.current.currentTime = seekToSeconds;
             safePlay();
         }
-    }, [seekToSeconds]);
+    }, [seekToSeconds, safePlay]);
 
     const getVideoDuration = () => {
         if (vp.current.duration) {
@@ -214,7 +224,8 @@ function VideoPlayer({
     };
 
     const reportProgress = useCallback((force = false) => {
-        if (!vp.current || !onProgress) {
+        const handleProgress = onProgressRef.current;
+        if (!vp.current || !handleProgress) {
             return;
         }
         const now = Date.now();
@@ -222,11 +233,11 @@ function VideoPlayer({
             return;
         }
         lastProgressReport.current = now;
-        onProgress({
+        handleProgress({
             currentTime: vp.current.currentTime,
             duration: vp.current.duration || 0,
         });
-    }, [onProgress]);
+    }, []);
 
     useEffect(() => {
         const flushProgress = () => reportProgress(true);

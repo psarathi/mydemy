@@ -176,7 +176,48 @@ describe('VideoPlayer', () => {
         await user.click(nextButton);
 
         expect(mockGetNextVideo).toHaveBeenCalled();
-        expect(screen.getByTestId('autoplay-countdown')).toBeInTheDocument();
+        expect(screen.queryByTestId('autoplay-countdown')).not.toBeInTheDocument();
+        expect(screen.getByText(/useState/i)).toBeInTheDocument();
+    });
+
+    test('does not reload the same video when progress start time changes', () => {
+        const {rerender} = render(<VideoPlayer {...defaultProps} startTime={0} />);
+        const video = document.querySelector('video');
+        video.load.mockClear();
+        video.play.mockClear();
+
+        rerender(<VideoPlayer {...defaultProps} startTime={42} />);
+
+        expect(video.load).not.toHaveBeenCalled();
+        expect(video.play).not.toHaveBeenCalled();
+        expect(document.querySelector('source').getAttribute('src')).toContain('intro.mp4');
+    });
+
+    test('keeps beforeunload progress handler stable across parent rerenders', () => {
+        const firstProgress = jest.fn();
+        const secondProgress = jest.fn();
+        const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
+        const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+
+        const {rerender, unmount} = render(
+            <VideoPlayer {...defaultProps} onProgress={firstProgress} />
+        );
+        firstProgress.mockClear();
+        addEventListenerSpy.mockClear();
+        removeEventListenerSpy.mockClear();
+
+        rerender(<VideoPlayer {...defaultProps} onProgress={secondProgress} />);
+
+        expect(removeEventListenerSpy).not.toHaveBeenCalledWith('beforeunload', expect.any(Function));
+        expect(addEventListenerSpy).not.toHaveBeenCalledWith('beforeunload', expect.any(Function));
+        expect(firstProgress).not.toHaveBeenCalled();
+
+        fireEvent(window, new Event('beforeunload'));
+        expect(secondProgress).toHaveBeenCalled();
+
+        unmount();
+        addEventListenerSpy.mockRestore();
+        removeEventListenerSpy.mockRestore();
     });
 
     test('loads countdown duration from localStorage', () => {
