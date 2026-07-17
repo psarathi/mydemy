@@ -193,8 +193,11 @@ function VideoPlayer({
         setCurrentSubtitle(subtitlesFile);
         seekTarget.current = {videoFile, startTime: startTimeRef.current};
         lastProgressReport.current = 0;
-        endHandler(true);
-    }, [videoFile, subtitlesFile, endHandler]);
+        if (vp.current) {
+            vp.current.load();
+            safePlay();
+        }
+    }, [videoFile, subtitlesFile, safePlay]);
 
     useEffect(() => {
         if (vp.current && typeof seekToSeconds === 'number') {
