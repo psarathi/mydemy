@@ -23,6 +23,7 @@ import {
 } from '../utils/courseTracking';
 import {useSession} from 'next-auth/react';
 import {useCourses} from '../hooks/useCourses';
+import {parseVttCues, searchTranscriptCues} from '../utils/transcripts';
 
 function CourseName({courseName}) {
     const searchParams = useSearchParams();
@@ -93,6 +94,9 @@ function CourseName({courseName}) {
     const [annotationFilter, setAnnotationFilter] = useState('all');
     const [noteDraft, setNoteDraft] = useState(null);
     const [seekTarget, setSeekTarget] = useState(null);
+    const [transcriptQuery, setTranscriptQuery] = useState('');
+    const [transcriptIndex, setTranscriptIndex] = useState({});
+    const [transcriptSearchState, setTranscriptSearchState] = useState('idle');
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
             (currentVideoFileIndex) => currentVideoFileIndex + 1
@@ -123,6 +127,14 @@ function CourseName({courseName}) {
         }
     };
 
+    const playTranscriptResult = (result) => {
+        playSelectedVideo(result.videoFile);
+        setSeekTarget({
+            seconds: result.startSeconds,
+            id: `${result.videoFile}-${result.startSeconds}-${Date.now()}`,
+        });
+    };
+
     const getLessonMetaByFileName = (fileName) => {
         if (!course || !fileName) return null;
 
@@ -144,12 +156,15 @@ function CourseName({courseName}) {
     const activeLessonMeta = getLessonMetaByFileName(videoFile);
     const activeLessonProgress = activeLessonMeta
         ? getLessonProgressEntry(
-            courseName,
-            activeLessonMeta.topicName,
-            activeLessonMeta.lessonName
-        )
+              courseName,
+              activeLessonMeta.topicName,
+              activeLessonMeta.lessonName
+          )
         : null;
-    const courseProgressSummary = getCourseProgressSummary(course, lessonProgress);
+    const courseProgressSummary = getCourseProgressSummary(
+        course,
+        lessonProgress
+    );
     const resumeLesson = courseProgressSummary.activeLesson;
     const showContinueButton =
         resumeLesson &&
@@ -287,7 +302,9 @@ function CourseName({courseName}) {
             topic: item.topicName || '',
             lesson: item.lessonName,
         });
-        window.location.href = `/${encodeURIComponent(item.courseName)}?${params.toString()}`;
+        window.location.href = `/${encodeURIComponent(
+            item.courseName
+        )}?${params.toString()}`;
     };
 
     useEffect(() => {
@@ -297,9 +314,15 @@ function CourseName({courseName}) {
             setLearningPlaylist(event.detail.playlist || getLearningPlaylist());
         };
 
-        window.addEventListener('learningPlaylistUpdated', handlePlaylistUpdated);
+        window.addEventListener(
+            'learningPlaylistUpdated',
+            handlePlaylistUpdated
+        );
         return () => {
-            window.removeEventListener('learningPlaylistUpdated', handlePlaylistUpdated);
+            window.removeEventListener(
+                'learningPlaylistUpdated',
+                handlePlaylistUpdated
+            );
         };
     }, []);
 
@@ -358,6 +381,92 @@ function CourseName({courseName}) {
         (annotation) =>
             annotationFilter === 'all' || annotation.type === annotationFilter
     );
+
+    const transcriptResults = React.useMemo(() => {
+        if (!transcriptQuery.trim()) {
+            return [];
+        }
+
+        return Object.values(transcriptIndex)
+            .flatMap((entry) =>
+                searchTranscriptCues(entry.cues, transcriptQuery).map(
+                    (cue) => ({
+                        ...cue,
+                        videoFile: entry.videoFile,
+                        topicName: entry.topicName,
+                        lessonName: entry.lessonName,
+                    })
+                )
+            )
+            .slice(0, 30);
+    }, [transcriptIndex, transcriptQuery]);
+
+    useEffect(() => {
+        if (!course || !transcriptQuery.trim()) {
+            return;
+        }
+
+        let isCancelled = false;
+        const missingLessons = [];
+
+        course.topics.forEach((topicItem) => {
+            topicItem.files
+                .filter((file) => SUPPORTED_VIDEO_EXTENSIONS.includes(file.ext))
+                .forEach((file) => {
+                    const videoPath = getFileName(course, topicItem, file);
+                    const subtitlePath = videoPath.replace(/\.[^.]+$/, '.vtt');
+                    if (!transcriptIndex[subtitlePath]) {
+                        missingLessons.push({
+                            videoFile: videoPath,
+                            subtitlesFile: subtitlePath,
+                            topicName: topicItem.name,
+                            lessonName: file.name,
+                        });
+                    }
+                });
+        });
+
+        if (!missingLessons.length) {
+            return;
+        }
+
+        setTranscriptSearchState('loading');
+        Promise.all(
+            missingLessons.map((lessonItem) =>
+                fetch(`${getCdnBase()}/${lessonItem.subtitlesFile}`)
+                    .then((response) =>
+                        response.ok ? response.text() : Promise.reject()
+                    )
+                    .then((vttText) => ({
+                        ...lessonItem,
+                        cues: parseVttCues(vttText),
+                        unavailable: false,
+                    }))
+                    .catch(() => ({
+                        ...lessonItem,
+                        cues: [],
+                        unavailable: true,
+                    }))
+            )
+        ).then((entries) => {
+            if (isCancelled) {
+                return;
+            }
+
+            setTranscriptIndex((current) => {
+                const nextIndex = {...current};
+                entries.forEach((entry) => {
+                    nextIndex[entry.subtitlesFile] = entry;
+                });
+                return nextIndex;
+            });
+            setTranscriptSearchState('ready');
+        });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [course, transcriptIndex, transcriptQuery]);
 
     if (isLoading) {
         return (
@@ -461,10 +570,14 @@ function CourseName({courseName}) {
                         <h1 className='modern-course-title'>{courseName}</h1>
                         {showContinueButton && (
                             <Link
-                                href={getCourseResumeUrl(courseName, resumeLesson)}
+                                href={getCourseResumeUrl(
+                                    courseName,
+                                    resumeLesson
+                                )}
                                 className='course-continue-link'
                             >
-                                Continue {resumeLesson.lessonName} at {formatProgressTime(resumeLesson.currentTime)}
+                                Continue {resumeLesson.lessonName} at{' '}
+                                {formatProgressTime(resumeLesson.currentTime)}
                             </Link>
                         )}
                         <div className='course-stats'>
@@ -507,6 +620,79 @@ function CourseName({courseName}) {
                     </header>
 
                     <div className='modern-content-list'>
+                        <section className='transcript-search-panel'>
+                            <label htmlFor='transcript-search-input'>
+                                Transcript search
+                            </label>
+                            <div className='transcript-search-box'>
+                                <svg
+                                    width='14'
+                                    height='14'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                >
+                                    <circle cx='11' cy='11' r='8'></circle>
+                                    <line
+                                        x1='21'
+                                        y1='21'
+                                        x2='16.65'
+                                        y2='16.65'
+                                    ></line>
+                                </svg>
+                                <input
+                                    id='transcript-search-input'
+                                    type='search'
+                                    placeholder='Search captions'
+                                    value={transcriptQuery}
+                                    onChange={(event) =>
+                                        setTranscriptQuery(event.target.value)
+                                    }
+                                />
+                            </div>
+                            {transcriptQuery.trim() && (
+                                <div className='transcript-results'>
+                                    {transcriptSearchState === 'loading' &&
+                                        !transcriptResults.length && (
+                                            <p className='transcript-empty'>
+                                                Indexing transcripts...
+                                            </p>
+                                        )}
+                                    {transcriptResults.map((result, index) => (
+                                        <button
+                                            key={`${result.videoFile}-${result.startSeconds}-${index}`}
+                                            type='button'
+                                            className='transcript-result'
+                                            onClick={() =>
+                                                playTranscriptResult(result)
+                                            }
+                                        >
+                                            <span className='transcript-time'>
+                                                {formatTimestamp(
+                                                    result.startSeconds
+                                                )}
+                                            </span>
+                                            <span className='transcript-copy'>
+                                                <strong>
+                                                    {result.lessonName}
+                                                </strong>
+                                                <small>
+                                                    {result.topicName}
+                                                </small>
+                                                <span>{result.text}</span>
+                                            </span>
+                                        </button>
+                                    ))}
+                                    {transcriptSearchState === 'ready' &&
+                                        transcriptResults.length === 0 && (
+                                            <p className='transcript-empty'>
+                                                No transcript matches found.
+                                            </p>
+                                        )}
+                                </div>
+                            )}
+                        </section>
                         <section className='learning-playlist-panel'>
                             <div className='learning-playlist-header'>
                                 <h2>Playlist</h2>
@@ -518,47 +704,105 @@ function CourseName({courseName}) {
                                         <div
                                             key={item.id}
                                             className='learning-playlist-item'
-                                            onClick={() => playPlaylistItem(item)}
+                                            onClick={() =>
+                                                playPlaylistItem(item)
+                                            }
                                         >
                                             <button
                                                 className='playlist-order-btn'
-                                                onClick={(event) => handleMovePlaylistLesson(event, item.id, 'up')}
+                                                onClick={(event) =>
+                                                    handleMovePlaylistLesson(
+                                                        event,
+                                                        item.id,
+                                                        'up'
+                                                    )
+                                                }
                                                 disabled={index === 0}
                                                 aria-label={`Move ${item.lessonName} up`}
                                             >
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                                <svg
+                                                    width='13'
+                                                    height='13'
+                                                    viewBox='0 0 24 24'
+                                                    fill='none'
+                                                    stroke='currentColor'
+                                                    strokeWidth='2'
+                                                >
+                                                    <polyline points='18 15 12 9 6 15'></polyline>
                                                 </svg>
                                             </button>
                                             <button
                                                 className='playlist-order-btn'
-                                                onClick={(event) => handleMovePlaylistLesson(event, item.id, 'down')}
-                                                disabled={index === learningPlaylist.length - 1}
+                                                onClick={(event) =>
+                                                    handleMovePlaylistLesson(
+                                                        event,
+                                                        item.id,
+                                                        'down'
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    learningPlaylist.length - 1
+                                                }
                                                 aria-label={`Move ${item.lessonName} down`}
                                             >
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                                <svg
+                                                    width='13'
+                                                    height='13'
+                                                    viewBox='0 0 24 24'
+                                                    fill='none'
+                                                    stroke='currentColor'
+                                                    strokeWidth='2'
+                                                >
+                                                    <polyline points='6 9 12 15 18 9'></polyline>
                                                 </svg>
                                             </button>
                                             <div className='playlist-item-copy'>
                                                 <span>{item.lessonName}</span>
-                                                <small>{item.courseName} / {item.topicName}</small>
+                                                <small>
+                                                    {item.courseName} /{' '}
+                                                    {item.topicName}
+                                                </small>
                                             </div>
                                             <button
                                                 className='playlist-remove-btn'
-                                                onClick={(event) => handleRemoveFromPlaylist(event, item.id)}
+                                                onClick={(event) =>
+                                                    handleRemoveFromPlaylist(
+                                                        event,
+                                                        item.id
+                                                    )
+                                                }
                                                 aria-label={`Remove ${item.lessonName} from playlist`}
                                             >
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                <svg
+                                                    width='13'
+                                                    height='13'
+                                                    viewBox='0 0 24 24'
+                                                    fill='none'
+                                                    stroke='currentColor'
+                                                    strokeWidth='2'
+                                                >
+                                                    <line
+                                                        x1='18'
+                                                        y1='6'
+                                                        x2='6'
+                                                        y2='18'
+                                                    ></line>
+                                                    <line
+                                                        x1='6'
+                                                        y1='6'
+                                                        x2='18'
+                                                        y2='18'
+                                                    ></line>
                                                 </svg>
                                             </button>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className='learning-playlist-empty'>Queue lessons from any course.</p>
+                                <p className='learning-playlist-empty'>
+                                    Queue lessons from any course.
+                                </p>
                             )}
                         </section>
 
@@ -600,17 +844,19 @@ function CourseName({courseName}) {
                                             );
                                             const isActive =
                                                 lessonFileName === currentVideo;
-                                            const lessonId = getPlaylistLessonId(
-                                                courseName,
-                                                topic.name,
-                                                file.name
-                                            );
-                                            const inPlaylist = isLessonInPlaylist(
-                                                courseName,
-                                                topic.name,
-                                                file.name,
-                                                learningPlaylist
-                                            );
+                                            const lessonId =
+                                                getPlaylistLessonId(
+                                                    courseName,
+                                                    topic.name,
+                                                    file.name
+                                                );
+                                            const inPlaylist =
+                                                isLessonInPlaylist(
+                                                    courseName,
+                                                    topic.name,
+                                                    file.name,
+                                                    learningPlaylist
+                                                );
 
                                             return (
                                                 <div
@@ -633,125 +879,167 @@ function CourseName({courseName}) {
                                                         )
                                                     }
                                                 >
-                                                <div className='lesson-content'>
-                                                    <div className='lesson-play-icon'>
-                                                        {lessonEntry?.completed ? (
-                                                            <svg
-                                                                width='16'
-                                                                height='16'
-                                                                viewBox='0 0 24 24'
-                                                                fill='none'
-                                                                stroke='currentColor'
-                                                                strokeWidth='2'
-                                                            >
-                                                                <path d='M20 6L9 17l-5-5'></path>
-                                                            </svg>
-                                                        ) : isActive ? (
-                                                            <svg
-                                                                width='16'
-                                                                height='16'
-                                                                viewBox='0 0 24 24'
-                                                                fill='none'
-                                                                stroke='currentColor'
-                                                                strokeWidth='2'
-                                                            >
-                                                                <rect
-                                                                    x='6'
-                                                                    y='4'
-                                                                    width='4'
+                                                    <div className='lesson-content'>
+                                                        <div className='lesson-play-icon'>
+                                                            {lessonEntry?.completed ? (
+                                                                <svg
+                                                                    width='16'
                                                                     height='16'
-                                                                ></rect>
-                                                                <rect
-                                                                    x='14'
-                                                                    y='4'
-                                                                    width='4'
+                                                                    viewBox='0 0 24 24'
+                                                                    fill='none'
+                                                                    stroke='currentColor'
+                                                                    strokeWidth='2'
+                                                                >
+                                                                    <path d='M20 6L9 17l-5-5'></path>
+                                                                </svg>
+                                                            ) : isActive ? (
+                                                                <svg
+                                                                    width='16'
                                                                     height='16'
-                                                                ></rect>
-                                                            </svg>
-                                                        ) : (
-                                                            <svg
-                                                                width='16'
-                                                                height='16'
-                                                                viewBox='0 0 24 24'
-                                                                fill='none'
-                                                                stroke='currentColor'
-                                                                strokeWidth='2'
-                                                            >
-                                                                <polygon points='5 3 19 12 5 21 5 3'></polygon>
-                                                            </svg>
-                                                        )}
-                                                    </div>
-                                                    <div className='lesson-info'>
-                                                        <span className='lesson-name'>
-                                                            {file.name}
-                                                        </span>
-                                                        {lessonEntry && (
-                                                            <span className='lesson-progress-status'>
-                                                                {lessonEntry.completed
-                                                                    ? 'Complete'
-                                                                    : `Started ${formatProgressTime(
-                                                                          lessonEntry.currentTime
-                                                                      )}`}
+                                                                    viewBox='0 0 24 24'
+                                                                    fill='none'
+                                                                    stroke='currentColor'
+                                                                    strokeWidth='2'
+                                                                >
+                                                                    <rect
+                                                                        x='6'
+                                                                        y='4'
+                                                                        width='4'
+                                                                        height='16'
+                                                                    ></rect>
+                                                                    <rect
+                                                                        x='14'
+                                                                        y='4'
+                                                                        width='4'
+                                                                        height='16'
+                                                                    ></rect>
+                                                                </svg>
+                                                            ) : (
+                                                                <svg
+                                                                    width='16'
+                                                                    height='16'
+                                                                    viewBox='0 0 24 24'
+                                                                    fill='none'
+                                                                    stroke='currentColor'
+                                                                    strokeWidth='2'
+                                                                >
+                                                                    <polygon points='5 3 19 12 5 21 5 3'></polygon>
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                        <div className='lesson-info'>
+                                                            <span className='lesson-name'>
+                                                                {file.name}
                                                             </span>
-                                                        )}
-                                                        {isActive &&
-                                                            annotations.length > 0 && (
-                                                                <span className='lesson-annotation-count'>
-                                                                    {
-                                                                        annotations.length
-                                                                    }{' '}
-                                                                    saved
+                                                            {lessonEntry && (
+                                                                <span className='lesson-progress-status'>
+                                                                    {lessonEntry.completed
+                                                                        ? 'Complete'
+                                                                        : `Started ${formatProgressTime(
+                                                                              lessonEntry.currentTime
+                                                                          )}`}
                                                                 </span>
                                                             )}
+                                                            {isActive &&
+                                                                annotations.length >
+                                                                    0 && (
+                                                                    <span className='lesson-annotation-count'>
+                                                                        {
+                                                                            annotations.length
+                                                                        }{' '}
+                                                                        saved
+                                                                    </span>
+                                                                )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <button
-                                                    className={`modern-playlist-btn ${inPlaylist ? 'active' : ''}`}
-                                                    onClick={(event) => inPlaylist
-                                                        ? handleRemoveFromPlaylist(event, lessonId)
-                                                        : handleAddToPlaylist(event, topic, file)
-                                                    }
-                                                    aria-label={`${inPlaylist ? 'Remove' : 'Add'} ${file.name} ${inPlaylist ? 'from' : 'to'} playlist`}
-                                                    title={inPlaylist ? 'Remove from playlist' : 'Add to playlist'}
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        {inPlaylist ? (
-                                                            <path d="M20 6L9 17l-5-5"></path>
-                                                        ) : (
-                                                            <>
-                                                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                                            </>
-                                                        )}
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    className='modern-copy-url-btn'
-                                                    onClick={(event) =>
-                                                        copyVideoURL(
-                                                            event,
-                                                            getFileName(
-                                                                course,
-                                                                topic,
-                                                                file
-                                                            )
-                                                        )
-                                                    }
-                                                    aria-label={`Copy URL for ${file.name}`}
-                                                >
-                                                    <svg
-                                                        width='14'
-                                                        height='14'
-                                                        viewBox='0 0 24 24'
-                                                        fill='none'
-                                                        stroke='currentColor'
-                                                        strokeWidth='2'
+                                                    <button
+                                                        className={`modern-playlist-btn ${
+                                                            inPlaylist
+                                                                ? 'active'
+                                                                : ''
+                                                        }`}
+                                                        onClick={(event) =>
+                                                            inPlaylist
+                                                                ? handleRemoveFromPlaylist(
+                                                                      event,
+                                                                      lessonId
+                                                                  )
+                                                                : handleAddToPlaylist(
+                                                                      event,
+                                                                      topic,
+                                                                      file
+                                                                  )
+                                                        }
+                                                        aria-label={`${
+                                                            inPlaylist
+                                                                ? 'Remove'
+                                                                : 'Add'
+                                                        } ${file.name} ${
+                                                            inPlaylist
+                                                                ? 'from'
+                                                                : 'to'
+                                                        } playlist`}
+                                                        title={
+                                                            inPlaylist
+                                                                ? 'Remove from playlist'
+                                                                : 'Add to playlist'
+                                                        }
                                                     >
-                                                        <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'></path>
-                                                        <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                                        <svg
+                                                            width='14'
+                                                            height='14'
+                                                            viewBox='0 0 24 24'
+                                                            fill='none'
+                                                            stroke='currentColor'
+                                                            strokeWidth='2'
+                                                        >
+                                                            {inPlaylist ? (
+                                                                <path d='M20 6L9 17l-5-5'></path>
+                                                            ) : (
+                                                                <>
+                                                                    <line
+                                                                        x1='12'
+                                                                        y1='5'
+                                                                        x2='12'
+                                                                        y2='19'
+                                                                    ></line>
+                                                                    <line
+                                                                        x1='5'
+                                                                        y1='12'
+                                                                        x2='19'
+                                                                        y2='12'
+                                                                    ></line>
+                                                                </>
+                                                            )}
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        className='modern-copy-url-btn'
+                                                        onClick={(event) =>
+                                                            copyVideoURL(
+                                                                event,
+                                                                getFileName(
+                                                                    course,
+                                                                    topic,
+                                                                    file
+                                                                )
+                                                            )
+                                                        }
+                                                        aria-label={`Copy URL for ${file.name}`}
+                                                    >
+                                                        <svg
+                                                            width='14'
+                                                            height='14'
+                                                            viewBox='0 0 24 24'
+                                                            fill='none'
+                                                            stroke='currentColor'
+                                                            strokeWidth='2'
+                                                        >
+                                                            <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'></path>
+                                                            <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             );
                                         })}
                                 </div>
