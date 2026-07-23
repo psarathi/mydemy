@@ -1735,6 +1735,112 @@ button {
     font-weight: 500;
 }
 
+.transcript-search-panel {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+    padding: 0 0 16px;
+}
+
+.transcript-search-panel label {
+    color: var(--text-secondary);
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.transcript-search-box {
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-tertiary);
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.transcript-search-box input {
+    background: transparent;
+    border: 0;
+    color: var(--text-primary);
+    flex: 1;
+    font: inherit;
+    font-size: 13px;
+    min-width: 0;
+    outline: 0;
+}
+
+.transcript-results {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.transcript-result {
+    align-items: flex-start;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 1fr;
+    padding: 8px;
+    text-align: left;
+}
+
+.transcript-result:hover,
+.transcript-result:focus-visible {
+    border-color: var(--accent);
+    outline: 0;
+}
+
+.transcript-time {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.transcript-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.transcript-copy strong,
+.transcript-copy small,
+.transcript-copy span {
+    overflow-wrap: anywhere;
+}
+
+.transcript-copy strong {
+    font-size: 12px;
+}
+
+.transcript-copy small,
+.transcript-empty {
+    color: var(--text-tertiary);
+    font-size: 11px;
+}
+
+.transcript-copy span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.transcript-empty {
+    margin: 0;
+    padding: 4px 0;
+}
+
 /* Lessons List */
 .modern-lessons-list {
     display: flex;
