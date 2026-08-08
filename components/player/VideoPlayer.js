@@ -35,6 +35,7 @@ function VideoPlayer({
     const [audioTracks, setAudioTracks] = useState([]);
     const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
     const hls = useRef(null);
+    const hlsActive = useRef(false);
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
@@ -192,13 +193,18 @@ function VideoPlayer({
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
         if (supportsNativeHls) {
+            hlsActive.current = true;
             vp.current.src = manifestUrl;
             vp.current.load();
-            return () => controller.abort();
+            return () => {
+                controller.abort();
+                hlsActive.current = false;
+            };
         }
 
         const instance = new Hls();
         hls.current = instance;
+        hlsActive.current = true;
         const updateAudioTracks = (tracks) => {
             setAudioTracks(tracks.map((track, index) => ({
                 id: String(index),
@@ -222,6 +228,7 @@ function VideoPlayer({
             if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
                 instance.destroy();
                 hls.current = null;
+                hlsActive.current = false;
                 vp.current?.load();
             }
         });
@@ -231,6 +238,7 @@ function VideoPlayer({
             controller.abort();
             instance.destroy();
             hls.current = null;
+            hlsActive.current = false;
         };
     }, [hlsManifestFile]);
 
@@ -291,7 +299,7 @@ function VideoPlayer({
         setCurrentSubtitle(subtitlesFile);
         seekTarget.current = {videoFile, startTime: startTimeRef.current};
         lastProgressReport.current = 0;
-        if (vp.current) {
+        if (vp.current && !hlsActive.current) {
             vp.current.load();
             safePlay();
         }
