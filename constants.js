@@ -23,7 +23,7 @@ exports.getCdnBase = function getCdnBase() {
 exports.COURSES_FOLDER = process.env.COURSES_FOLDER || '/Volumes/medianas/Videos';
 exports.LOCAL_CDN = 'Videos';
 exports.COURSE_PATH = 'courses';
-exports.KAFKA_SERVER = process.env.KAFKA_SERVER || '192.168.1.141';
+exports.KAFKA_SERVER = process.env.KAFKA_SERVER || '192.168.1.24';
 exports.KAFKA_SERVER_PORT = process.env.KAFKA_SERVER_PORT || '9092';
 exports.KAFKA_CONSUMER_TIMEOUT = 5 * 60 * 1000; // 5 minutes as it takes about 3 minutes to pro
 // cess the courses
