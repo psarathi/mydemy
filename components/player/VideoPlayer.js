@@ -201,16 +201,22 @@ function VideoPlayer({
                 }
                 const instance = new Hls();
                 hls.current = instance;
-                instance.loadSource(manifestUrl);
-                instance.attachMedia(vp.current);
-                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
-                    setAudioTracks(data.audioTracks.map((track, index) => ({
+                const updateAudioTracks = (tracks) => {
+                    setAudioTracks(tracks.map((track, index) => ({
                         id: String(index),
                         label: track.name || track.lang || `Audio track ${index + 1}`,
                         enabled: index === instance.audioTrack,
                     })));
                     setSelectedAudioTrack(String(instance.audioTrack));
-                });
+                };
+                instance.on(Hls.Events.MANIFEST_PARSED, () =>
+                    updateAudioTracks(instance.audioTracks)
+                );
+                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
+                    updateAudioTracks(data.audioTracks)
+                );
+                instance.loadSource(manifestUrl);
+                instance.attachMedia(vp.current);
             })
             .catch(() => {});
         return () => {

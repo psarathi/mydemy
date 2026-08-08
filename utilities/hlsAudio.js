@@ -17,7 +17,7 @@ function run(command, args) {
 async function getAudioTracks(file) {
     const child = spawn('ffprobe', [
         '-v', 'error', '-select_streams', 'a', '-show_entries',
-        'stream=index:stream_tags=language,title', '-of', 'json', file,
+        'stream=index:stream_disposition=default:stream_tags=language,title', '-of', 'json', file,
     ]);
     let output = '';
     for await (const chunk of child.stdout) output += chunk;
@@ -27,12 +27,12 @@ async function getAudioTracks(file) {
     return JSON.parse(output).streams || [];
 }
 
-async function createHlsAudioVariants(file) {
+async function createHlsAudioVariants(file, {force = false} = {}) {
     const output = `${file}.hls`;
     const master = path.join(output, 'master.m3u8');
     try {
         await fs.access(master);
-        return {created: false, hasHls: true};
+        if (!force) return {created: false, hasHls: true};
     } catch (_) {
         // Continue: this video has not been processed yet.
     }
@@ -40,11 +40,16 @@ async function createHlsAudioVariants(file) {
     const tracks = await getAudioTracks(file);
     if (tracks.length < 2) return {created: false, hasHls: false};
 
+    await fs.rm(output, {recursive: true, force: true});
     await fs.mkdir(output, {recursive: true});
     await run('ffmpeg', ['-y', '-i', file, '-map', '0:v:0', '-c:v', 'copy',
         '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod',
         '-hls_segment_filename', path.join(output, 'video-%03d.ts'), path.join(output, 'video.m3u8')]);
 
+    const defaultTrackIndex = tracks.findIndex(
+        (track) => track.disposition?.default === 1
+    );
+    const selectedDefault = defaultTrackIndex >= 0 ? defaultTrackIndex : 0;
     const media = [];
     for (const [index, track] of tracks.entries()) {
         const language = track.tags?.language || 'und';
@@ -52,7 +57,7 @@ async function createHlsAudioVariants(file) {
         await run('ffmpeg', ['-y', '-i', file, '-map', `0:a:${index}`, '-c:a', 'aac',
             '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod',
             '-hls_segment_filename', path.join(output, `audio-${index}-%03d.ts`), path.join(output, `audio-${index}.m3u8`)]);
-        media.push(`#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="${name}",LANGUAGE="${language}",DEFAULT=${index === 0 ? 'YES' : 'NO'},AUTOSELECT=YES,URI="audio-${index}.m3u8"`);
+        media.push(`#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="${name}",LANGUAGE="${language}",DEFAULT=${index === selectedDefault ? 'YES' : 'NO'},AUTOSELECT=YES,URI="audio-${index}.m3u8"`);
     }
     await fs.writeFile(master, ['#EXTM3U', '#EXT-X-VERSION:3', ...media,
         '#EXT-X-STREAM-INF:BANDWIDTH=4000000,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio"', 'video.m3u8', '',

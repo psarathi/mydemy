@@ -10,10 +10,13 @@ mobile browsers:
 ```bash
 node scripts/create-hls-audio-variants.js "/path/to/video.mp4"
 node scripts/create-hls-audio-variants.js "/path/to/course" --recursive
+node scripts/create-hls-audio-variants.js "/path/to/course" --recursive --force
 ```
 
 The command requires `ffmpeg` and `ffprobe`. It writes a sibling
 `<video>.hls/master.m3u8` playlist and does not alter the source video.
+Use `--force` to regenerate existing HLS assets after changing their track
+metadata.
 
 Course refreshes skip HLS generation by default. Call `fetchCourses` with an
 explicit option when processing a newly uploaded course:

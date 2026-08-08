@@ -16,10 +16,12 @@ async function filesAt(target, recursive) {
 }
 
 async function main() {
-    const [target, flag] = process.argv.slice(2);
+    const [target, ...flags] = process.argv.slice(2);
     if (!target) throw new Error('Provide a video file or directory.');
-    for (const file of await filesAt(path.resolve(target), flag === '--recursive')) {
-        const result = await createHlsAudioVariants(file);
+    for (const file of await filesAt(path.resolve(target), flags.includes('--recursive'))) {
+        const result = await createHlsAudioVariants(file, {
+            force: flags.includes('--force'),
+        });
         if (result.created) console.log(`Created ${file}.hls/master.m3u8`);
     }
 }
