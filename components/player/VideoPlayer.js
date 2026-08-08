@@ -34,6 +34,7 @@ function VideoPlayer({
     const [captionsEnabled, setCaptionsEnabled] = useState(true);
     const [audioTracks, setAudioTracks] = useState([]);
     const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
+    const [hlsStatus, setHlsStatus] = useState('idle');
     const hls = useRef(null);
     const hlsActive = useRef(false);
     const [captureSeconds, setCaptureSeconds] = useState(0);
@@ -189,10 +190,15 @@ function VideoPlayer({
 
     useEffect(() => {
         const supportsNativeHls = vp.current?.canPlayType('application/vnd.apple.mpegurl');
-        if (!vp.current || !hlsManifestFile || (!Hls.isSupported() && !supportsNativeHls)) return;
+        if (!vp.current || !hlsManifestFile) return;
+        if (!Hls.isSupported() && !supportsNativeHls) {
+            setHlsStatus('unsupported');
+            return;
+        }
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
         if (supportsNativeHls) {
+            setHlsStatus('native-loading');
             hlsActive.current = true;
             vp.current.src = manifestUrl;
             vp.current.load();
@@ -205,6 +211,7 @@ function VideoPlayer({
         const instance = new Hls();
         hls.current = instance;
         hlsActive.current = true;
+        setHlsStatus('loading');
         const updateAudioTracks = (tracks) => {
             setAudioTracks(tracks.map((track, index) => ({
                 id: String(index),
@@ -220,11 +227,13 @@ function VideoPlayer({
             );
             if (preferredTrack >= 0) instance.audioTrack = preferredTrack;
             updateAudioTracks(instance.audioTracks);
+            setHlsStatus('ready');
         });
         instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
             updateAudioTracks(data.audioTracks)
         );
         instance.on(Hls.Events.ERROR, (_, data) => {
+            setHlsStatus(`error-${data.type}-${data.details}`);
             if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
                 instance.destroy();
                 hls.current = null;
@@ -559,7 +568,7 @@ function VideoPlayer({
                 </div>
             </div>
 
-            <div className='video-player-wrapper'>
+            <div className='video-player-wrapper' data-hls-status={hlsStatus}>
                 <div className='video-aspect-container'>
                     {currentVideo ? (
                         <video
