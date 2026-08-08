@@ -191,7 +191,9 @@ function VideoPlayer({
         if (!vp.current || !hlsManifestFile || (!Hls.isSupported() && !supportsNativeHls)) return;
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
-        fetch(manifestUrl, {method: 'HEAD', signal: controller.signal})
+        // The CDN permits GET but not HEAD. The master playlist is tiny, so
+        // fetching it is both compatible and cheap before attaching HLS.
+        fetch(manifestUrl, {signal: controller.signal})
             .then((response) => {
                 if (!response.ok || controller.signal.aborted || !vp.current) return;
                 if (supportsNativeHls) {
