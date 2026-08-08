@@ -191,39 +191,40 @@ function VideoPlayer({
         if (!vp.current || !hlsManifestFile || (!Hls.isSupported() && !supportsNativeHls)) return;
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
-        // The CDN permits GET but not HEAD. The master playlist is tiny, so
-        // fetching it is both compatible and cheap before attaching HLS.
-        fetch(manifestUrl, {signal: controller.signal})
-            .then((response) => {
-                if (!response.ok || controller.signal.aborted || !vp.current) return;
-                if (supportsNativeHls) {
-                    vp.current.src = manifestUrl;
-                    vp.current.load();
-                    return;
-                }
-                const instance = new Hls();
-                hls.current = instance;
-                const updateAudioTracks = (tracks) => {
-                    setAudioTracks(tracks.map((track, index) => ({
-                        id: String(index),
-                        label: track.name || track.lang || `Audio track ${index + 1}`,
-                        enabled: index === instance.audioTrack,
-                    })));
-                    setSelectedAudioTrack(String(instance.audioTrack));
-                };
-                instance.on(Hls.Events.MANIFEST_PARSED, () =>
-                    updateAudioTracks(instance.audioTracks)
-                );
-                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
-                    updateAudioTracks(data.audioTracks)
-                );
-                instance.loadSource(manifestUrl);
-                instance.attachMedia(vp.current);
-            })
-            .catch(() => {});
+        if (supportsNativeHls) {
+            vp.current.src = manifestUrl;
+            vp.current.load();
+            return () => controller.abort();
+        }
+
+        const instance = new Hls();
+        hls.current = instance;
+        const updateAudioTracks = (tracks) => {
+            setAudioTracks(tracks.map((track, index) => ({
+                id: String(index),
+                label: track.name || track.lang || `Audio track ${index + 1}`,
+                enabled: index === instance.audioTrack,
+            })));
+            setSelectedAudioTrack(String(instance.audioTrack));
+        };
+        instance.on(Hls.Events.MANIFEST_PARSED, () =>
+            updateAudioTracks(instance.audioTracks)
+        );
+        instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
+            updateAudioTracks(data.audioTracks)
+        );
+        instance.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                instance.destroy();
+                hls.current = null;
+                vp.current?.load();
+            }
+        });
+        instance.loadSource(manifestUrl);
+        instance.attachMedia(vp.current);
         return () => {
             controller.abort();
-            hls.current?.destroy();
+            instance.destroy();
             hls.current = null;
         };
     }, [hlsManifestFile]);
