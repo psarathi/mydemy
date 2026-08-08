@@ -3,6 +3,7 @@ import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 import AudioSettings from './AudioSettings';
+import Hls from 'hls.js';
 
 function VideoPlayer({
     videoFile,
@@ -14,6 +15,7 @@ function VideoPlayer({
     onCaptureBookmark,
     onCaptureNote,
     seekToSeconds,
+    hlsManifestFile,
 }) {
     const vp = useRef(null);
     const lastProgressReport = useRef(0);
@@ -32,6 +34,7 @@ function VideoPlayer({
     const [captionsEnabled, setCaptionsEnabled] = useState(true);
     const [audioTracks, setAudioTracks] = useState([]);
     const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
+    const hls = useRef(null);
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
@@ -173,11 +176,49 @@ function VideoPlayer({
 
     const handleAudioTrackChange = (trackId) => {
         setSelectedAudioTrack(trackId);
+        if (hls.current) {
+            hls.current.audioTrack = Number(trackId);
+            return;
+        }
         if (!vp.current?.audioTracks) return;
         Array.from(vp.current.audioTracks).forEach((track, index) => {
             track.enabled = String(index) === trackId;
         });
     };
+
+    useEffect(() => {
+        const supportsNativeHls = vp.current?.canPlayType('application/vnd.apple.mpegurl');
+        if (!vp.current || !hlsManifestFile || (!Hls.isSupported() && !supportsNativeHls)) return;
+        const controller = new AbortController();
+        const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
+        fetch(manifestUrl, {method: 'HEAD', signal: controller.signal})
+            .then((response) => {
+                if (!response.ok || controller.signal.aborted || !vp.current) return;
+                if (supportsNativeHls) {
+                    vp.current.src = manifestUrl;
+                    vp.current.load();
+                    return;
+                }
+                const instance = new Hls();
+                hls.current = instance;
+                instance.loadSource(manifestUrl);
+                instance.attachMedia(vp.current);
+                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+                    setAudioTracks(data.audioTracks.map((track, index) => ({
+                        id: String(index),
+                        label: track.name || track.lang || `Audio track ${index + 1}`,
+                        enabled: index === instance.audioTrack,
+                    })));
+                    setSelectedAudioTrack(String(instance.audioTrack));
+                });
+            })
+            .catch(() => {});
+        return () => {
+            controller.abort();
+            hls.current?.destroy();
+            hls.current = null;
+        };
+    }, [hlsManifestFile]);
 
     const getVideoName = () => {
         if (!currentVideo) {

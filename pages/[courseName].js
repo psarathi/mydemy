@@ -68,6 +68,8 @@ function CourseName({courseName}) {
     const [subtitlesFile, setSubtitlesFile] = useState(
         videoFileList[0] ? videoFileList[0].replace(/\.[^.]+$/, '.vtt') : ''
     );
+    const getHlsManifestFile = (file) =>
+        file ? `${file}.hls/master.m3u8` : '';
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth <= 1024;
@@ -866,6 +868,7 @@ function CourseName({courseName}) {
                     <VideoPlayer
                         videoFile={videoFile}
                         subtitlesFile={subtitlesFile}
+                        hlsManifestFile={getHlsManifestFile(videoFile)}
                         getNextVideo={getNextVideo}
                         startTime={activeLessonProgress?.currentTime || 0}
                         onProgress={handleVideoProgress}
