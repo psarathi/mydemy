@@ -24,11 +24,11 @@ async function generateHlsAudioForCourses(courses) {
     }
     if (generated) console.log(`✓ Generated HLS audio playlists for ${generated} videos`);
 }
-const fetchCourses = async (
+const fetchCourses = async ({
     coursesToProcess = [],
     logCourseDetails = false,
-    {generateHlsAudio = false} = {}
-) => {
+    generateHlsAudio = false,
+} = {}) => {
     console.log('fetching courses...');
     const currentDirectory = path.join(COURSES_FOLDER);
     let courses = await fetchCourseListingsV3(

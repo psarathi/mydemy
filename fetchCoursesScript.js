@@ -32,4 +32,4 @@ if (process.env.SKIP_COURSE_FETCH === 'true') {
     }
 }
 
-fetchCourses([], true);
+fetchCourses({logCourseDetails: true});

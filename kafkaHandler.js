@@ -88,7 +88,8 @@ const runConsumer = async () => {
             let msg_json = JSON.parse(message.value);
             if (msg_json[KAFKA_UPLOAD_MSG]?.length) {
                 console.log('[Kafka] Processing message, courses to add:', msg_json[KAFKA_UPLOAD_MSG]);
-                await fetchCourses(msg_json[KAFKA_UPLOAD_MSG], false, {
+                await fetchCourses({
+                    coursesToProcess: msg_json[KAFKA_UPLOAD_MSG],
                     generateHlsAudio: true,
                 });
                 // Keep the CDN's redundant copy in sync with the freshly appended local file.

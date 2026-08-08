@@ -19,7 +19,7 @@ Course refreshes skip HLS generation by default. Call `fetchCourses` with an
 explicit option when processing a newly uploaded course:
 
 ```js
-await fetchCourses(uploadedCourses, false, {generateHlsAudio: true});
+await fetchCourses({coursesToProcess: uploadedCourses, generateHlsAudio: true});
 ```
 
 ## Getting Started
