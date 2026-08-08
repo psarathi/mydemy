@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
+import AudioSettings from './AudioSettings';
 
 function VideoPlayer({
     videoFile,
@@ -27,6 +28,10 @@ function VideoPlayer({
     const [nextVideoInfo, setNextVideoInfo] = useState(null);
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+    const [showAudioSettings, setShowAudioSettings] = useState(false);
+    const [captionsEnabled, setCaptionsEnabled] = useState(true);
+    const [audioTracks, setAudioTracks] = useState([]);
+    const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
@@ -105,14 +110,16 @@ function VideoPlayer({
         return {topic, lesson};
     };
 
-    const addTrack = () => {
-        if (!vp.current || !currentSubtitle) {
+    const addTrack = useCallback(() => {
+        if (!vp.current) {
             return;
         }
-        // getVideoDuration();
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
+        }
+        if (!currentSubtitle) {
+            return;
         }
         let track = document.createElement('track');
         track.kind = 'captions';
@@ -120,20 +127,56 @@ function VideoPlayer({
         track.srclang = 'en';
         track.src = `${getCdnBase()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
-            this.mode = 'showing';
+            this.mode = captionsEnabled ? 'showing' : 'disabled';
             if (
                 vp.current &&
                 vp.current.textTracks &&
                 vp.current.textTracks[0]
             ) {
-                vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
+                vp.current.textTracks[0].mode = captionsEnabled
+                    ? 'showing'
+                    : 'disabled'; // thanks Firefox
             }
         });
         track.default = true;
         vp.current.appendChild(track);
         if (vp.current.textTracks && vp.current.textTracks[0]) {
-            vp.current.textTracks[0].mode = 'showing';
+            vp.current.textTracks[0].mode = captionsEnabled
+                ? 'showing'
+                : 'disabled';
         }
+    }, [captionsEnabled, currentSubtitle]);
+
+    const syncAudioTracks = useCallback(() => {
+        if (!vp.current || !vp.current.audioTracks) {
+            setAudioTracks([]);
+            setSelectedAudioTrack('original');
+            return;
+        }
+
+        const tracks = Array.from(vp.current.audioTracks).map((track, index) => ({
+            id: String(index),
+            label: track.label || track.language || `Audio track ${index + 1}`,
+            enabled: track.enabled,
+        }));
+        setAudioTracks(tracks);
+        const activeTrack = tracks.find((track) => track.enabled);
+        setSelectedAudioTrack(activeTrack ? activeTrack.id : tracks[0]?.id || 'original');
+    }, []);
+
+    const handleCaptionsChange = (enabled) => {
+        setCaptionsEnabled(enabled);
+        if (vp.current?.textTracks?.[0]) {
+            vp.current.textTracks[0].mode = enabled ? 'showing' : 'disabled';
+        }
+    };
+
+    const handleAudioTrackChange = (trackId) => {
+        setSelectedAudioTrack(trackId);
+        if (!vp.current?.audioTracks) return;
+        Array.from(vp.current.audioTracks).forEach((track, index) => {
+            track.enabled = String(index) === trackId;
+        });
     };
 
     const getVideoName = () => {
@@ -149,9 +192,9 @@ function VideoPlayer({
     };
 
     useEffect(() => {
-        //due to some reason, the onLoadStart is not being called when the page loads, hence this effect
+        // Some browsers do not fire onLoadStart on the initial page load.
         addTrack();
-    });
+    }, [addTrack]);
 
     useEffect(() => {
         // Load autoplay countdown duration from localStorage
@@ -391,6 +434,31 @@ function VideoPlayer({
                             Capture at {formatTimestamp(captureSeconds)}
                         </span>
                     )}
+                    <div className='audio-settings-control'>
+                        <button
+                            className='control-btn'
+                            onClick={() => setShowAudioSettings((isOpen) => !isOpen)}
+                            aria-label='Audio and subtitles settings'
+                            aria-expanded={showAudioSettings}
+                            title='Audio and subtitles'
+                        >
+                            <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                                <path d='M11 5 6 9H2v6h4l5 4V5Z'></path>
+                                <path d='M15.54 8.46a5 5 0 0 1 0 7.07'></path>
+                                <path d='M19.07 4.93a10 10 0 0 1 0 14.14'></path>
+                            </svg>
+                        </button>
+                        <AudioSettings
+                            isOpen={showAudioSettings}
+                            onClose={() => setShowAudioSettings(false)}
+                            captionsAvailable={Boolean(currentSubtitle)}
+                            captionsEnabled={captionsEnabled}
+                            onCaptionsChange={handleCaptionsChange}
+                            audioTracks={audioTracks}
+                            selectedAudioTrack={selectedAudioTrack}
+                            onAudioTrackChange={handleAudioTrackChange}
+                        />
+                    </div>
                     <button
                         className='control-btn'
                         onClick={() => setShowSettings(true)}
@@ -443,7 +511,10 @@ function VideoPlayer({
                             onTimeUpdate={handleTimeUpdate}
                             ref={vp}
                             onLoadStart={addTrack}
-                            onLoadedMetadata={getVideoDuration}
+                            onLoadedMetadata={() => {
+                                getVideoDuration();
+                                syncAudioTracks();
+                            }}
                             onEnded={() => {
                                 reportProgress(true);
                                 endHandler();

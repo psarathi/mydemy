@@ -27,6 +27,19 @@ jest.mock('../../../components/player/VideoSettings', () => {
     };
 });
 
+jest.mock('../../../components/player/AudioSettings', () => {
+    return function MockAudioSettings({ isOpen, onClose, captionsEnabled, onCaptionsChange }) {
+        if (!isOpen) return null;
+        return (
+            <div data-testid="audio-settings">
+                <span>{captionsEnabled ? 'Captions on' : 'Captions off'}</span>
+                <button onClick={() => onCaptionsChange(false)}>Disable captions</button>
+                <button onClick={onClose}>Close audio settings</button>
+            </div>
+        );
+    };
+});
+
 describe('VideoPlayer', () => {
     const mockGetNextVideo = jest.fn();
     const defaultProps = {
@@ -98,6 +111,26 @@ describe('VideoPlayer', () => {
 
         const settingsButton = screen.getByLabelText('Video settings');
         expect(settingsButton).toBeInTheDocument();
+    });
+
+    test('opens audio and subtitles settings', async () => {
+        const user = userEvent.setup();
+        render(<VideoPlayer {...defaultProps} />);
+
+        await user.click(screen.getByLabelText('Audio and subtitles settings'));
+
+        expect(screen.getByTestId('audio-settings')).toBeInTheDocument();
+        expect(screen.getByText('Captions on')).toBeInTheDocument();
+    });
+
+    test('allows captions to be disabled from audio settings', async () => {
+        const user = userEvent.setup();
+        render(<VideoPlayer {...defaultProps} />);
+
+        await user.click(screen.getByLabelText('Audio and subtitles settings'));
+        await user.click(screen.getByText('Disable captions'));
+
+        expect(screen.getByText('Captions off')).toBeInTheDocument();
     });
 
     test('opens settings modal when settings button is clicked', async () => {

@@ -1964,6 +1964,77 @@ button {
     background: var(--accent-subtle);
 }
 
+.audio-settings-control {
+    position: relative;
+}
+
+.audio-settings-popover {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 260px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+}
+
+.audio-settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+.audio-settings-close {
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.audio-settings-section + .audio-settings-section {
+    margin-top: 14px;
+}
+
+.audio-settings-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.audio-settings-section select {
+    width: 100%;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font: inherit;
+}
+
+.audio-settings-section select:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.audio-settings-description {
+    margin: 5px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 /* Video Player Wrapper */
 .video-player-wrapper {
     position: relative;
