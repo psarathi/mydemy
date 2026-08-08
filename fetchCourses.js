@@ -38,9 +38,14 @@ const fetchCourses = async (
     );
     console.log(`${courses.length} courses were found`);
 
-    // Process one video at a time: remuxing is CPU and disk intensive, and
-    // course refreshes must remain safe on the media server.
-    await generateHlsAudio(courses);
+    // Remuxing is CPU and disk intensive, so ordinary catalog refreshes skip
+    // it. Set GENERATE_HLS_AUDIO=true when a refresh should create missing
+    // multi-language HLS playlists.
+    if (process.env.GENERATE_HLS_AUDIO === 'true') {
+        await generateHlsAudio(courses);
+    } else {
+        console.log('⏭️  Skipping HLS audio generation (set GENERATE_HLS_AUDIO=true to enable)');
+    }
 
     // If no courses found, check if we should preserve existing file
     if (courses.length === 0) {
