@@ -207,9 +207,14 @@ function VideoPlayer({
             })));
             setSelectedAudioTrack(String(instance.audioTrack));
         };
-        instance.on(Hls.Events.MANIFEST_PARSED, () =>
-            updateAudioTracks(instance.audioTracks)
-        );
+        instance.on(Hls.Events.MANIFEST_PARSED, () => {
+            const preferredLanguage = navigator.language?.split('-')[0];
+            const preferredTrack = instance.audioTracks.findIndex(
+                (track) => track.lang === preferredLanguage
+            );
+            if (preferredTrack >= 0) instance.audioTrack = preferredTrack;
+            updateAudioTracks(instance.audioTracks);
+        });
         instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
             updateAudioTracks(data.audioTracks)
         );
