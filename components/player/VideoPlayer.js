@@ -5,6 +5,11 @@ import VideoSettings from './VideoSettings';
 import AudioSettings from './AudioSettings';
 import Hls from 'hls.js';
 
+const LANGUAGE_NAMES = {
+    eng: 'English',
+    rus: 'Russian',
+};
+
 function getHlsAudioTracks(manifest) {
     return manifest
         .split('\n')
@@ -13,8 +18,9 @@ function getHlsAudioTracks(manifest) {
             const attribute = (name) =>
                 line.match(new RegExp(`${name}="([^"]+)"`))?.[1];
             const language = attribute('LANGUAGE');
-            let label = attribute('NAME') || language || `Audio track ${index + 1}`;
-            if (language && typeof Intl?.DisplayNames === 'function') {
+            let label = LANGUAGE_NAMES[language?.toLowerCase()] ||
+                attribute('NAME') || language || `Audio track ${index + 1}`;
+            if (!LANGUAGE_NAMES[language?.toLowerCase()] && language && typeof Intl?.DisplayNames === 'function') {
                 try {
                     label = new Intl.DisplayNames([navigator.language], {
                         type: 'language',
