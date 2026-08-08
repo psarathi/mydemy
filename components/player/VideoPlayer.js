@@ -12,9 +12,20 @@ function getHlsAudioTracks(manifest) {
         .map((line, index) => {
             const attribute = (name) =>
                 line.match(new RegExp(`${name}="([^"]+)"`))?.[1];
+            const language = attribute('LANGUAGE');
+            let label = attribute('NAME') || language || `Audio track ${index + 1}`;
+            if (language && typeof Intl?.DisplayNames === 'function') {
+                try {
+                    label = new Intl.DisplayNames([navigator.language], {
+                        type: 'language',
+                    }).of(language) || label;
+                } catch (_) {
+                    // Keep the manifest label when the language code is invalid.
+                }
+            }
             return {
                 id: String(index),
-                label: attribute('NAME') || attribute('LANGUAGE') || `Audio track ${index + 1}`,
+                label,
                 enabled: false,
             };
         });
