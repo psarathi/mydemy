@@ -5,6 +5,21 @@ import VideoSettings from './VideoSettings';
 import AudioSettings from './AudioSettings';
 import Hls from 'hls.js';
 
+function getHlsAudioTracks(manifest) {
+    return manifest
+        .split('\n')
+        .filter((line) => line.startsWith('#EXT-X-MEDIA:TYPE=AUDIO'))
+        .map((line, index) => {
+            const attribute = (name) =>
+                line.match(new RegExp(`${name}="([^"]+)"`))?.[1];
+            return {
+                id: String(index),
+                label: attribute('NAME') || attribute('LANGUAGE') || `Audio track ${index + 1}`,
+                enabled: false,
+            };
+        });
+}
+
 function VideoPlayer({
     videoFile,
     subtitlesFile,
@@ -218,6 +233,14 @@ function VideoPlayer({
         hls.current = instance;
         hlsActive.current = true;
         setHlsStatus('loading');
+        fetch(manifestUrl)
+            .then((response) => response.ok ? response.text() : '')
+            .then((manifest) => {
+                if (!controller.signal.aborted) {
+                    setAudioTracks(getHlsAudioTracks(manifest));
+                }
+            })
+            .catch(() => {});
         const updateAudioTracks = (tracks) => {
             setAudioTracks(tracks.map((track, index) => ({
                 id: String(index),
