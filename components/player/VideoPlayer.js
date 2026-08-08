@@ -15,7 +15,6 @@ function VideoPlayer({
     onCaptureBookmark,
     onCaptureNote,
     seekToSeconds,
-    hlsManifestFile,
 }) {
     const vp = useRef(null);
     const lastProgressReport = useRef(0);
@@ -23,6 +22,9 @@ function VideoPlayer({
     const startTimeRef = useRef(startTime);
     const onProgressRef = useRef(onProgress);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
+    const hlsManifestFile = currentVideo
+        ? `${currentVideo}.hls/master.m3u8`
+        : '';
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
