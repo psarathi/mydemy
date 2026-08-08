@@ -59,6 +59,24 @@ async function getDirectoryMtime(dirPath) {
 }
 
 /**
+ * Gets the best available creation timestamp for a course directory.
+ * @param {string} dirPath - Directory path
+ * @returns {Promise<string|null>} ISO timestamp or null when unavailable
+ */
+async function getDirectoryAddedAt(dirPath) {
+    try {
+        const stats = await fs.stat(dirPath);
+        const timestamp = stats.birthtimeMs || stats.ctimeMs || stats.mtimeMs;
+
+        if (!timestamp) return null;
+
+        return new Date(timestamp).toISOString();
+    } catch (err) {
+        return null;
+    }
+}
+
+/**
  * Checks if cached result is still valid
  * @param {string} dirPath - Directory path
  * @param {Object} cached - Cached object with mtime and data
@@ -287,6 +305,7 @@ async function listDirectoriesWithTopics(
                     const cached = directoryCache.get(coursePath);
                     if (await isCacheValid(coursePath, cached)) {
                         topics = cached.data;
+                        const addedAt = await getDirectoryAddedAt(coursePath);
                         if (logCourseDetails) {
                             console.log(
                                 `processing course: ${courseName} topics found: ${topics.length} (cached)`
@@ -294,13 +313,18 @@ async function listDirectoriesWithTopics(
                         }
                         return {
                             name: courseName,
+                            addedAt,
                             topics,
                         };
                     }
                 }
 
                 // Not cached or cache invalid, process the course
-                topics = await processCourseTopics(coursePath, courseName, useCache);
+                const [processedTopics, addedAt] = await Promise.all([
+                    processCourseTopics(coursePath, courseName, useCache),
+                    getDirectoryAddedAt(coursePath),
+                ]);
+                topics = processedTopics;
 
                 // Cache the result
                 if (useCache) {
@@ -316,6 +340,7 @@ async function listDirectoriesWithTopics(
 
                 return {
                     name: courseName,
+                    addedAt,
                     topics,
                 };
             }

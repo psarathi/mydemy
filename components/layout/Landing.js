@@ -57,6 +57,19 @@ const getMatchingLessonsForCourse = (course, searchTermParts, exactSearch) => {
     );
 };
 
+export const formatCourseAddedDate = (addedAt) => {
+    if (!addedAt) return '';
+
+    const date = new Date(addedAt);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(date);
+};
+
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
 
@@ -654,6 +667,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                     {courseList.map((course, i) => {
                         const progressSummary = getCourseProgressSummary(course, lessonProgress);
                         const matchingLessons = lessonSearchMatches[course.name] || [];
+                        const addedDate = formatCourseAddedDate(course.addedAt);
 
                         return (
                             <div
@@ -665,6 +679,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                 <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
                                     <h3 className='course-title'>{course.name}</h3>
                                 </Link>
+                                {addedDate && (
+                                    <div className='course-added-date'>
+                                        Added {addedDate}
+                                    </div>
+                                )}
                                 <div className='course-stats'>
                                     <span className='stat'>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
