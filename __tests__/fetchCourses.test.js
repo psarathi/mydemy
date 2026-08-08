@@ -2,9 +2,11 @@ const fs = require('node:fs/promises');
 const fetchCourses = require('../fetchCourses');
 const fetchCourseListingsV3 = require('../utilities/fetchCourseListingsV3');
 const { COURSES_FOLDER, COURSES_FILE_NAME } = require('../constants');
+const {createHlsAudioVariants} = require('../utilities/hlsAudio');
 
 jest.mock('node:fs/promises');
 jest.mock('../utilities/fetchCourseListingsV3');
+jest.mock('../utilities/hlsAudio', () => ({createHlsAudioVariants: jest.fn()}));
 
 describe('fetchCourses', () => {
     const mockCourses = [
@@ -65,6 +67,21 @@ describe('fetchCourses', () => {
                 true
             );
         });
+    });
+
+    it('generates HLS audio only when the caller opts in', async () => {
+        const courseWithVideo = [{
+            name: 'Course 1',
+            topics: [{name: 'Topic 1', files: [{fileName: 'lesson.mp4'}]}],
+        }];
+        fetchCourseListingsV3.mockResolvedValue(courseWithVideo);
+        createHlsAudioVariants.mockResolvedValue({created: true, hasHls: true});
+
+        await fetchCourses([], false, {generateHlsAudio: true});
+
+        expect(createHlsAudioVariants).toHaveBeenCalledWith(
+            `${COURSES_FOLDER}/Course 1/Topic 1/lesson.mp4`
+        );
     });
 
     describe('No courses found - preservation logic', () => {

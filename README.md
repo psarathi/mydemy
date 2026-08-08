@@ -15,11 +15,11 @@ node scripts/create-hls-audio-variants.js "/path/to/course" --recursive
 The command requires `ffmpeg` and `ffprobe`. It writes a sibling
 `<video>.hls/master.m3u8` playlist and does not alter the source video.
 
-Course refreshes skip HLS generation by default. Enable it only when you want
-to process new multi-language videos:
+Course refreshes skip HLS generation by default. Call `fetchCourses` with an
+explicit option when processing a newly uploaded course:
 
-```bash
-GENERATE_HLS_AUDIO=true npm run build:courses
+```js
+await fetchCourses(uploadedCourses, false, {generateHlsAudio: true});
 ```
 
 ## Getting Started

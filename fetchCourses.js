@@ -5,7 +5,7 @@ const fetchCourseListingsV2 = require('./utilities/fetchCourseListingsV2');
 const fetchCourseListingsV3 = require('./utilities/fetchCourseListingsV3');
 const {createHlsAudioVariants} = require('./utilities/hlsAudio');
 
-async function generateHlsAudio(courses) {
+async function generateHlsAudioForCourses(courses) {
     const videoPaths = courses.flatMap((course) =>
         course.topics.flatMap((topic) => topic.files.map((file) =>
             topic.isTopicLess
@@ -26,7 +26,8 @@ async function generateHlsAudio(courses) {
 }
 const fetchCourses = async (
     coursesToProcess = [],
-    logCourseDetails = false
+    logCourseDetails = false,
+    {generateHlsAudio = false} = {}
 ) => {
     console.log('fetching courses...');
     const currentDirectory = path.join(COURSES_FOLDER);
@@ -38,14 +39,9 @@ const fetchCourses = async (
     );
     console.log(`${courses.length} courses were found`);
 
-    // Remuxing is CPU and disk intensive, so ordinary catalog refreshes skip
-    // it. Set GENERATE_HLS_AUDIO=true when a refresh should create missing
-    // multi-language HLS playlists.
-    if (process.env.GENERATE_HLS_AUDIO === 'true') {
-        await generateHlsAudio(courses);
-    } else {
-        console.log('⏭️  Skipping HLS audio generation (set GENERATE_HLS_AUDIO=true to enable)');
-    }
+    // Remuxing is CPU and disk intensive, so callers opt in per processing
+    // run—for example, when handling a newly uploaded course.
+    if (generateHlsAudio) await generateHlsAudioForCourses(courses);
 
     // If no courses found, check if we should preserve existing file
     if (courses.length === 0) {
