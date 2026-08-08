@@ -78,6 +78,7 @@ jest.mock('../../../utils/tagging', () => ({
 const mockCourses = [
     {
         name: 'React Basics',
+        addedAt: '2026-08-08T12:01:12.000Z',
         topics: [
             {
                 name: 'Introduction',
@@ -252,6 +253,12 @@ describe('Landing', () => {
 
         expect(screen.getAllByText('2 topics')).toHaveLength(2); // React Basics, JavaScript Advanced
         expect(screen.getByText('1 topics')).toBeInTheDocument(); // Node.js Fundamentals
+    });
+
+    test('displays course added date when available', () => {
+        render(<Landing />);
+
+        expect(screen.getByText(/Added Aug 8, 2026/)).toBeInTheDocument();
     });
 
     test('renders course links correctly', () => {
