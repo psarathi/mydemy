@@ -170,6 +170,10 @@ function VideoPlayer({
     }, [captionsEnabled, currentSubtitle]);
 
     const syncAudioTracks = useCallback(() => {
+        // hls.js owns the track list for HLS playback. Chromium exposes no
+        // equivalent native AudioTrackList, so do not overwrite the manifest
+        // tracks when video metadata arrives.
+        if (hls.current) return;
         if (!vp.current || !vp.current.audioTracks) {
             setAudioTracks([]);
             setSelectedAudioTrack('original');
