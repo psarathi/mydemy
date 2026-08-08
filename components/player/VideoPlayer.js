@@ -192,14 +192,18 @@ function VideoPlayer({
 
     useEffect(() => {
         const supportsNativeHls = vp.current?.canPlayType('application/vnd.apple.mpegurl');
+        const supportsHlsJs = Hls.isSupported();
         if (!vp.current || !hlsManifestFile) return;
-        if (!Hls.isSupported() && !supportsNativeHls) {
+        if (!supportsHlsJs && !supportsNativeHls) {
             setHlsStatus('unsupported');
             return;
         }
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
-        if (supportsNativeHls) {
+        // Chromium can claim native HLS MIME support but does not expose its
+        // alternate audio tracks. Prefer hls.js whenever Media Source is
+        // available; reserve native HLS for Safari and similar browsers.
+        if (!supportsHlsJs && supportsNativeHls) {
             setHlsStatus('native-loading');
             hlsActive.current = true;
             vp.current.src = manifestUrl;
