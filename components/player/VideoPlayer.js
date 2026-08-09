@@ -4,6 +4,7 @@ import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
 import AudioSettings from './AudioSettings';
 import Hls from 'hls.js';
+import {isEnglishAudioLanguage} from '../../utilities/audioLanguage';
 
 function getHlsAudioTracks(manifest) {
     return manifest
@@ -265,9 +266,8 @@ function VideoPlayer({
             setSelectedAudioTrack(String(instance.audioTrack));
         };
         instance.on(Hls.Events.MANIFEST_PARSED, () => {
-            const preferredLanguage = navigator.language?.split('-')[0];
-            const preferredTrack = instance.audioTracks.findIndex(
-                (track) => track.lang === preferredLanguage
+            const preferredTrack = instance.audioTracks.findIndex((track) =>
+                isEnglishAudioLanguage(track.lang)
             );
             if (preferredTrack >= 0) instance.audioTrack = preferredTrack;
             updateAudioTracks(instance.audioTracks);
