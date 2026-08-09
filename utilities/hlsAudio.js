@@ -1,6 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const {spawn} = require('child_process');
+const {isEnglishAudioLanguage} = require('./audioLanguage');
 
 function run(command, args) {
     return new Promise((resolve, reject) => {
@@ -46,10 +47,18 @@ async function createHlsAudioVariants(file, {force = false} = {}) {
         '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod',
         '-hls_segment_filename', path.join(output, 'video-%03d.ts'), path.join(output, 'video.m3u8')]);
 
-    const defaultTrackIndex = tracks.findIndex(
+    const sourceDefaultTrackIndex = tracks.findIndex(
         (track) => track.disposition?.default === 1
     );
-    const selectedDefault = defaultTrackIndex >= 0 ? defaultTrackIndex : 0;
+    const englishTrackIndex = tracks.findIndex((track) =>
+        isEnglishAudioLanguage(track.tags?.language)
+    );
+    const selectedDefault =
+        englishTrackIndex >= 0
+            ? englishTrackIndex
+            : sourceDefaultTrackIndex >= 0
+            ? sourceDefaultTrackIndex
+            : 0;
     const media = [];
     for (const [index, track] of tracks.entries()) {
         const language = track.tags?.language || 'und';
