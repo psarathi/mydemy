@@ -66,6 +66,7 @@ function VideoPlayer({
     const [hlsStatus, setHlsStatus] = useState('idle');
     const hls = useRef(null);
     const hlsActive = useRef(false);
+    const hlsDefaultAudioSelected = useRef(false);
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
@@ -248,6 +249,7 @@ function VideoPlayer({
         const instance = new Hls();
         hls.current = instance;
         hlsActive.current = true;
+        hlsDefaultAudioSelected.current = false;
         setHlsStatus('loading');
         fetch(manifestUrl)
             .then((response) => response.ok ? response.text() : '')
@@ -266,16 +268,21 @@ function VideoPlayer({
             setSelectedAudioTrack(String(instance.audioTrack));
         };
         instance.on(Hls.Events.MANIFEST_PARSED, () => {
-            const preferredTrack = instance.audioTracks.findIndex((track) =>
-                isEnglishAudioLanguage(track.lang)
-            );
-            if (preferredTrack >= 0) instance.audioTrack = preferredTrack;
             updateAudioTracks(instance.audioTracks);
             setHlsStatus('ready');
         });
-        instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) =>
-            updateAudioTracks(data.audioTracks)
-        );
+        instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+            if (!hlsDefaultAudioSelected.current) {
+                const preferredTrack = data.audioTracks.findIndex((track) =>
+                    isEnglishAudioLanguage(track.lang)
+                );
+                if (preferredTrack >= 0) {
+                    instance.audioTrack = preferredTrack;
+                    hlsDefaultAudioSelected.current = true;
+                }
+            }
+            updateAudioTracks(data.audioTracks);
+        });
         instance.on(Hls.Events.ERROR, (_, data) => {
             setHlsStatus(`error-${data.type}-${data.details}`);
             if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
