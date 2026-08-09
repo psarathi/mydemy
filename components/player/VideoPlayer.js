@@ -232,71 +232,79 @@ function VideoPlayer({
         }
         const controller = new AbortController();
         const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
+        const loadOriginalVideo = () => {
+            if (!vp.current) return;
+            hls.current?.destroy();
+            hls.current = null;
+            hlsActive.current = false;
+            vp.current.removeAttribute('src');
+            vp.current.load();
+        };
         // Chromium can claim native HLS MIME support but does not expose its
         // alternate audio tracks. Prefer hls.js whenever Media Source is
         // available; reserve native HLS for Safari and similar browsers.
-        if (!supportsHlsJs && supportsNativeHls) {
-            setHlsStatus('native-loading');
-            hlsActive.current = true;
-            vp.current.src = manifestUrl;
-            vp.current.load();
-            return () => {
-                controller.abort();
-                hlsActive.current = false;
-            };
-        }
-
-        const instance = new Hls();
-        hls.current = instance;
-        hlsActive.current = true;
-        hlsDefaultAudioSelected.current = false;
         setHlsStatus('loading');
         fetch(manifestUrl)
-            .then((response) => response.ok ? response.text() : '')
-            .then((manifest) => {
-                if (!controller.signal.aborted) {
-                    setAudioTracks(getHlsAudioTracks(manifest));
-                }
+            .then((response) => {
+                if (!response.ok) throw new Error('HLS playlist not found');
+                return response.text();
             })
-            .catch(() => {});
-        const updateAudioTracks = (tracks) => {
-            setAudioTracks(tracks.map((track, index) => ({
-                id: String(index),
-                label: track.name || track.lang || `Audio track ${index + 1}`,
-                enabled: index === instance.audioTrack,
-            })));
-            setSelectedAudioTrack(String(instance.audioTrack));
-        };
-        instance.on(Hls.Events.MANIFEST_PARSED, () => {
-            updateAudioTracks(instance.audioTracks);
-            setHlsStatus('ready');
-        });
-        instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
-            if (!hlsDefaultAudioSelected.current) {
-                const preferredTrack = data.audioTracks.findIndex((track) =>
-                    isEnglishAudioLanguage(track.lang)
-                );
-                if (preferredTrack >= 0) {
-                    instance.audioTrack = preferredTrack;
-                    hlsDefaultAudioSelected.current = true;
+            .then((manifest) => {
+                if (controller.signal.aborted || !vp.current) return;
+                if (!supportsHlsJs && supportsNativeHls) {
+                    setHlsStatus('native-loading');
+                    hlsActive.current = true;
+                    vp.current.src = manifestUrl;
+                    vp.current.load();
+                    return;
                 }
-            }
-            updateAudioTracks(data.audioTracks);
-        });
-        instance.on(Hls.Events.ERROR, (_, data) => {
-            setHlsStatus(`error-${data.type}-${data.details}`);
-            if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                instance.destroy();
-                hls.current = null;
-                hlsActive.current = false;
-                vp.current?.load();
-            }
-        });
-        instance.loadSource(manifestUrl);
-        instance.attachMedia(vp.current);
+                const instance = new Hls();
+                hls.current = instance;
+                hlsActive.current = true;
+                hlsDefaultAudioSelected.current = false;
+                setAudioTracks(getHlsAudioTracks(manifest));
+                const updateAudioTracks = (tracks) => {
+                    setAudioTracks(tracks.map((track, index) => ({
+                        id: String(index),
+                        label: track.name || track.lang || `Audio track ${index + 1}`,
+                        enabled: index === instance.audioTrack,
+                    })));
+                    setSelectedAudioTrack(String(instance.audioTrack));
+                };
+                instance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    updateAudioTracks(instance.audioTracks);
+                    setHlsStatus('ready');
+                });
+                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+                    if (!hlsDefaultAudioSelected.current) {
+                        const preferredTrack = data.audioTracks.findIndex((track) =>
+                            isEnglishAudioLanguage(track.lang)
+                        );
+                        if (preferredTrack >= 0) {
+                            instance.audioTrack = preferredTrack;
+                            hlsDefaultAudioSelected.current = true;
+                        }
+                    }
+                    updateAudioTracks(data.audioTracks);
+                });
+                instance.on(Hls.Events.ERROR, (_, data) => {
+                    setHlsStatus(`error-${data.type}-${data.details}`);
+                    if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        loadOriginalVideo();
+                    }
+                });
+                instance.loadSource(manifestUrl);
+                instance.attachMedia(vp.current);
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) {
+                    setHlsStatus('fallback');
+                    loadOriginalVideo();
+                }
+            });
         return () => {
             controller.abort();
-            instance.destroy();
+            hls.current?.destroy();
             hls.current = null;
             hlsActive.current = false;
         };
