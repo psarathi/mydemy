@@ -8,7 +8,10 @@ const VIDEO_FILE_EXTENSIONS = new Set([
     '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv',
     '.webm', '.m4v', '.mpeg', '.mpg', '.3gp', '.ogv', '.ts'
 ]);
-const EXCLUDED_DIRECTORY = '0. Websites you may like';
+const EXCLUDED_DIRECTORY_MATCHERS = [
+    (name) => name === '0. Websites you may like',
+    (name) => name.toLowerCase().endsWith('.hls'),
+];
 const MAX_CONCURRENT_OPERATIONS = 50; // Limit concurrent file system operations
 
 // In-memory cache for directory results
@@ -17,7 +20,7 @@ const directoryCache = new Map();
 // HLS output lives beside a source video as <video>.hls/. These directories
 // contain transport-stream segments, not course topics or lessons.
 function isExcludedDirectory(name) {
-    return name === EXCLUDED_DIRECTORY || name.toLowerCase().endsWith('.hls');
+    return EXCLUDED_DIRECTORY_MATCHERS.some((matches) => matches(name));
 }
 
 /**
