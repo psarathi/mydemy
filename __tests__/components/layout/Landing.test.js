@@ -92,6 +92,7 @@ const mockCourses = [
     },
     {
         name: 'JavaScript Advanced',
+        addedAt: '2026-08-06T12:01:12.000Z',
         topics: [
             {
                 name: 'Closures',
@@ -105,6 +106,7 @@ const mockCourses = [
     },
     {
         name: 'Node.js Fundamentals',
+        addedAt: '2026-08-07T12:01:12.000Z',
         topics: [
             { name: 'Getting Started', files: [] }
         ]
@@ -147,6 +149,20 @@ describe('Landing', () => {
         expect(screen.getByText('React Basics')).toBeInTheDocument();
         expect(screen.getByText('JavaScript Advanced')).toBeInTheDocument();
         expect(screen.getByText('Node.js Fundamentals')).toBeInTheDocument();
+    });
+
+    test('orders courses by newest added date first', () => {
+        render(<Landing />);
+
+        const courseNames = Array.from(
+            document.querySelectorAll('.course-title')
+        ).map((heading) => heading.textContent);
+
+        expect(courseNames).toEqual([
+            'React Basics',
+            'Node.js Fundamentals',
+            'JavaScript Advanced',
+        ]);
     });
 
     test('filters courses based on search term', async () => {
