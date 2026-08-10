@@ -70,6 +70,17 @@ export const formatCourseAddedDate = (addedAt) => {
     }).format(date);
 };
 
+const getCourseAddedTime = (course) => {
+    const timestamp = new Date(course.addedAt || 0).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+export const sortCoursesByAddedDateDesc = (courses) =>
+    [...courses].sort((a, b) => {
+        const addedDateComparison = getCourseAddedTime(b) - getCourseAddedTime(a);
+        return addedDateComparison || a.name.localeCompare(b.name);
+    });
+
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
 
@@ -288,7 +299,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             });
         }
 
-        setCourseList(filtered);
+        setCourseList(sortCoursesByAddedDateDesc(filtered));
     }, [searchTerm, searchTermParts, exactSearch, searchInLessons, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
 
     useEffect(() => {
