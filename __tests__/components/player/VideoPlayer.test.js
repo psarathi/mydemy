@@ -201,6 +201,28 @@ describe('VideoPlayer', () => {
         expect(screen.queryByTestId('autoplay-countdown')).not.toBeInTheDocument();
     });
 
+    test('waits for next source to render before playing from countdown', async () => {
+        const user = userEvent.setup();
+        const playedSources = [];
+        window.HTMLMediaElement.prototype.play = jest.fn(() => {
+            playedSources.push(document.querySelector('source')?.getAttribute('src'));
+            return Promise.resolve();
+        });
+        render(<VideoPlayer {...defaultProps} />);
+        playedSources.length = 0;
+
+        const video = document.querySelector('video');
+        fireEvent.ended(video);
+
+        await user.click(screen.getByText('Play Now'));
+        await waitFor(() => {
+            expect(playedSources.some((src) => src?.includes('useState.mp4'))).toBe(true);
+        });
+        expect(playedSources).not.toContain(
+            expect.stringContaining('intro.mp4')
+        );
+    });
+
     test('shows next video button when clicking next', async () => {
         const user = userEvent.setup();
         render(<VideoPlayer {...defaultProps} />);

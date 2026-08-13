@@ -67,6 +67,7 @@ function VideoPlayer({
     const hls = useRef(null);
     const hlsActive = useRef(false);
     const hlsDefaultAudioSelected = useRef(false);
+    const pendingAutoplayVideo = useRef(null);
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
@@ -101,31 +102,21 @@ function VideoPlayer({
 
     const playNextVideo = () => {
         if (nextVideoInfo) {
+            pendingAutoplayVideo.current = nextVideoInfo.name;
             setCurrentVideo(nextVideoInfo.name);
             setCurrentSubtitle(nextVideoInfo.subtitles);
             setShowCountdown(false);
             setNextVideoInfo(null);
-            setTimeout(() => {
-                if (vp.current) {
-                    vp.current.load();
-                    safePlay();
-                }
-            }, 100);
         }
     };
 
     const skipToNextVideo = () => {
         const nextVideo = getNextVideo();
+        pendingAutoplayVideo.current = nextVideo.name;
         setCurrentVideo(nextVideo.name);
         setCurrentSubtitle(nextVideo.subtitles);
         setShowCountdown(false);
         setNextVideoInfo(null);
-        setTimeout(() => {
-            if (vp.current) {
-                vp.current.load();
-                safePlay();
-            }
-        }, 100);
     };
 
     const cancelAutoplay = () => {
@@ -364,6 +355,20 @@ function VideoPlayer({
             safePlay();
         }
     }, [videoFile, subtitlesFile, safePlay]);
+
+    useEffect(() => {
+        if (
+            !pendingAutoplayVideo.current ||
+            pendingAutoplayVideo.current !== currentVideo ||
+            !vp.current ||
+            hlsActive.current
+        ) {
+            return;
+        }
+        pendingAutoplayVideo.current = null;
+        vp.current.load();
+        safePlay();
+    }, [currentVideo, safePlay]);
 
     useEffect(() => {
         if (vp.current && typeof seekToSeconds === 'number') {
