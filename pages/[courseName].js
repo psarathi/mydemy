@@ -94,6 +94,8 @@ function CourseName({courseName}) {
     const [noteDraft, setNoteDraft] = useState(null);
     const [annotationMessage, setAnnotationMessage] = useState(null);
     const [seekTarget, setSeekTarget] = useState(null);
+    const noteTextAreaRef = useRef(null);
+    const shouldFocusNoteDraftRef = useRef(false);
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
             (currentVideoFileIndex) => currentVideoFileIndex + 1
@@ -237,6 +239,14 @@ function CourseName({courseName}) {
         setIsSidebarCollapsed(false);
     };
 
+    useEffect(() => {
+        if (!noteDraft || !shouldFocusNoteDraftRef.current) {
+            return;
+        }
+        shouldFocusNoteDraftRef.current = false;
+        noteTextAreaRef.current?.focus();
+    }, [noteDraft, isSidebarCollapsed]);
+
     function copyVideoURL(e, filePath) {
         // getCdnBase() returns a relative "/cdn" on the web build; prefix the
         // current origin so the copied URL is fully-qualified and shareable.
@@ -354,6 +364,8 @@ function CourseName({courseName}) {
     };
 
     const captureNote = (timeSeconds) => {
+        shouldFocusNoteDraftRef.current = true;
+        setIsSidebarCollapsed(false);
         setNoteDraft({type: 'note', timeSeconds, text: ''});
     };
 
@@ -821,6 +833,7 @@ function CourseName({courseName}) {
                                 </label>
                                 <textarea
                                     id='annotation-note-text'
+                                    ref={noteTextAreaRef}
                                     value={noteDraft.text}
                                     onChange={(event) =>
                                         setNoteDraft({
