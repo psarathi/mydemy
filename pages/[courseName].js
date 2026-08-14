@@ -92,6 +92,7 @@ function CourseName({courseName}) {
     const [annotations, setAnnotations] = useState([]);
     const [annotationFilter, setAnnotationFilter] = useState('all');
     const [noteDraft, setNoteDraft] = useState(null);
+    const [annotationMessage, setAnnotationMessage] = useState(null);
     const [seekTarget, setSeekTarget] = useState(null);
     const getNextVideo = () => {
         setCurrentVideoFileIndex(
@@ -313,17 +314,43 @@ function CourseName({courseName}) {
         setAnnotations(getLessonAnnotations(courseName, currentVideo));
     };
 
+    const showAnnotationMessage = (message, tone = 'success') => {
+        setAnnotationMessage({message, tone});
+    };
+
     const saveAnnotation = (annotation) => {
-        saveLessonAnnotation(courseName, currentVideo, annotation);
+        const saved = saveLessonAnnotation(courseName, currentVideo, annotation);
         refreshAnnotations();
+        return saved;
     };
 
     const captureBookmark = (timeSeconds) => {
-        saveAnnotation({
+        const bookmarkTime = Math.max(0, Math.floor(Number(timeSeconds) || 0));
+        const duplicateBookmark = annotations.find(
+            (annotation) =>
+                annotation.type === 'bookmark' &&
+                annotation.timeSeconds === bookmarkTime
+        );
+
+        if (duplicateBookmark) {
+            showAnnotationMessage(
+                `Bookmark already saved at ${formatTimestamp(bookmarkTime)}`,
+                'info'
+            );
+            return;
+        }
+
+        const saved = saveAnnotation({
             type: 'bookmark',
-            timeSeconds,
-            text: `Bookmark at ${formatTimestamp(timeSeconds)}`,
+            timeSeconds: bookmarkTime,
+            text: `Bookmark at ${formatTimestamp(bookmarkTime)}`,
         });
+
+        if (saved) {
+            showAnnotationMessage(
+                `Bookmark saved at ${formatTimestamp(bookmarkTime)}`
+            );
+        }
     };
 
     const captureNote = (timeSeconds) => {
@@ -814,6 +841,14 @@ function CourseName({courseName}) {
                                     <button type='submit'>Save</button>
                                 </div>
                             </form>
+                        )}
+                        {annotationMessage && (
+                            <div
+                                className={`annotation-feedback ${annotationMessage.tone}`}
+                                role='status'
+                            >
+                                {annotationMessage.message}
+                            </div>
                         )}
                         {visibleAnnotations.length > 0 ? (
                             <div className='annotations-list'>

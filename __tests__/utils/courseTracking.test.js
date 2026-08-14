@@ -427,6 +427,31 @@ describe('courseTracking utilities', () => {
             );
         });
 
+        test('does not save duplicate bookmark annotations for the same timestamp', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify({
+                    'React::lesson-1.mp4': [
+                        {
+                            id: 'bookmark-1',
+                            type: 'bookmark',
+                            timeSeconds: 12,
+                            text: 'Bookmark at 0:12',
+                        },
+                    ],
+                })
+            );
+
+            const saved = saveLessonAnnotation('React', 'lesson-1.mp4', {
+                type: 'bookmark',
+                timeSeconds: 12,
+                text: 'Bookmark at 0:12',
+            });
+
+            expect(saved.id).toBe('bookmark-1');
+            expect(localStorageMock.setItem).not.toHaveBeenCalled();
+            expect(mockDispatchEvent).not.toHaveBeenCalled();
+        });
+
         test('loads annotations for the requested lesson only', () => {
             localStorageMock.getItem.mockReturnValue(
                 JSON.stringify({
