@@ -432,6 +432,20 @@ export const saveLessonAnnotation = (courseName, lessonPath, annotation) => {
         createdAt: annotation.createdAt || now,
         updatedAt: now,
     };
+
+    if (saved.type === 'bookmark') {
+        const duplicateBookmark = existing.find(
+            (item) =>
+                item.id !== saved.id &&
+                item.type === 'bookmark' &&
+                Math.floor(Number(item.timeSeconds) || 0) === saved.timeSeconds
+        );
+
+        if (duplicateBookmark) {
+            return duplicateBookmark;
+        }
+    }
+
     store[key] = [
         ...existing.filter((item) => item.id !== saved.id),
         saved,
