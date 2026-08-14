@@ -6,6 +6,7 @@ import {
     getPinUsers,
     hasAdminUser,
     hydrateActiveUserFromStorage,
+    hydratePinUsersFromDatabase,
     importGuestActivityForUser,
     loginWithPin,
     logoutPinUser,
@@ -34,6 +35,9 @@ export function LearnerProvider({children}) {
     useEffect(() => {
         hydrateActiveUserFromStorage();
         refresh();
+        hydratePinUsersFromDatabase()
+            .then(refresh)
+            .catch(() => {});
         window.addEventListener('pinUsersUpdated', refresh);
         window.addEventListener('activePinUserUpdated', refresh);
         return () => {
