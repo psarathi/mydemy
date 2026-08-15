@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import {render, screen, fireEvent, waitFor} from '@testing-library/react';
+import {render, screen, fireEvent, waitFor, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Landing from '../../../components/layout/Landing';
 
@@ -55,6 +55,11 @@ jest.mock('../../../utils/courseTracking', () => ({
     addToHistory: jest.fn(),
     addCourseToCollection: jest.fn(),
     formatProgressTime: jest.fn(() => '0:00'),
+    getCourseAnnotationSummary: jest.fn((courseName) =>
+        courseName === 'React Basics'
+            ? {notes: 2, bookmarks: 1}
+            : {notes: 0, bookmarks: 0}
+    ),
     getCourseCollections: jest.fn(() => []),
     getCourseProgressSummary: jest.fn(() => ({
         completedLessons: 0,
@@ -123,6 +128,8 @@ jest.mock('../../../hooks/useCourses', () => ({
 
 const mockUseSession = require('next-auth/react').useSession;
 const mockAddToHistory = require('../../../utils/courseTracking').addToHistory;
+const mockGetCourseAnnotationSummary =
+    require('../../../utils/courseTracking').getCourseAnnotationSummary;
 
 describe('Landing', () => {
     const mockSession = {
@@ -133,6 +140,11 @@ describe('Landing', () => {
         jest.clearAllMocks();
         window.localStorage.clear();
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
+        mockGetCourseAnnotationSummary.mockImplementation((courseName) =>
+            courseName === 'React Basics'
+                ? {notes: 2, bookmarks: 1}
+                : {notes: 0, bookmarks: 0}
+        );
     });
 
     test('renders landing page with basic components', () => {
@@ -275,6 +287,40 @@ describe('Landing', () => {
         render(<Landing />);
 
         expect(screen.getByText(/Added Aug 8, 2026/)).toBeInTheDocument();
+    });
+
+    test('displays note and bookmark counts on course cards', () => {
+        render(<Landing />);
+
+        expect(screen.getByText('2 notes')).toBeInTheDocument();
+        expect(screen.getByText('1 bookmark')).toBeInTheDocument();
+        expect(screen.queryByText('0 notes')).not.toBeInTheDocument();
+        expect(screen.queryByText('0 bookmarks')).not.toBeInTheDocument();
+    });
+
+    test('refreshes course annotation counts when annotations change', async () => {
+        mockGetCourseAnnotationSummary.mockImplementation((courseName) =>
+            courseName === 'React Basics'
+                ? {notes: 1, bookmarks: 0}
+                : {notes: 0, bookmarks: 0}
+        );
+        render(<Landing />);
+
+        expect(screen.getByText('1 note')).toBeInTheDocument();
+
+        mockGetCourseAnnotationSummary.mockImplementation((courseName) =>
+            courseName === 'React Basics'
+                ? {notes: 3, bookmarks: 2}
+                : {notes: 0, bookmarks: 0}
+        );
+        act(() => {
+            window.dispatchEvent(new Event('lessonAnnotationsUpdated'));
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText('3 notes')).toBeInTheDocument();
+            expect(screen.getByText('2 bookmarks')).toBeInTheDocument();
+        });
     });
 
     test('renders course links correctly', () => {
