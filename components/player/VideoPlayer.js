@@ -70,6 +70,14 @@ function VideoPlayer({
     const pendingAutoplayVideo = useRef(null);
     const [captureSeconds, setCaptureSeconds] = useState(0);
 
+    const captureNote = () => {
+        if (vp.current) {
+            vp.current.pause();
+            setIsPlaying(false);
+        }
+        onCaptureNote(getCurrentSeconds());
+    };
+
     // Mobile browsers reject play() when autoplay-with-audio is blocked
     // (NotAllowedError). Swallow that rejection so it doesn't surface as an
     // uncaught promise error; the native controls let the user start playback.
@@ -548,7 +556,7 @@ function VideoPlayer({
                     {onCaptureNote && (
                         <button
                             className='control-btn'
-                            onClick={() => onCaptureNote(getCurrentSeconds())}
+                            onClick={captureNote}
                             aria-label='Add note at current timestamp'
                             title='Add note at current timestamp'
                         >
