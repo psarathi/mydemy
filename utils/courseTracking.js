@@ -413,6 +413,30 @@ export const getLessonAnnotations = (courseName, lessonPath) => {
     );
 };
 
+export const getCourseAnnotationSummary = (courseName) => {
+    const store = readAnnotationStore();
+    const coursePrefix = `${courseName || 'unknown-course'}::`;
+
+    return Object.entries(store).reduce(
+        (summary, [key, annotations]) => {
+            if (!key.startsWith(coursePrefix) || !Array.isArray(annotations)) {
+                return summary;
+            }
+
+            annotations.forEach((annotation) => {
+                if (annotation.type === 'note') {
+                    summary.notes += 1;
+                } else if (annotation.type === 'bookmark') {
+                    summary.bookmarks += 1;
+                }
+            });
+
+            return summary;
+        },
+        {notes: 0, bookmarks: 0}
+    );
+};
+
 export const saveLessonAnnotation = (courseName, lessonPath, annotation) => {
     if (typeof window === 'undefined') return null;
     const store = readAnnotationStore();

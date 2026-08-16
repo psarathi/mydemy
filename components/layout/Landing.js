@@ -11,6 +11,7 @@ import {
     addCourseToCollection,
     formatProgressTime,
     getCourseCollections,
+    getCourseAnnotationSummary,
     getCourseResumeUrl,
     getCourseProgressSummary,
     getLessonProgress,
@@ -104,6 +105,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [tagFilterMode, setTagFilterMode] = useState('OR');
     const [allTagCounts, setAllTagCounts] = useState([]);
     const [collections, setCollections] = useState([]);
+    const [courseAnnotationSummaries, setCourseAnnotationSummaries] = useState({});
     const [activeCollectionId, setActiveCollectionId] = useState('');
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
@@ -210,6 +212,29 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             );
         };
     }, []);
+
+    useEffect(() => {
+        const updateAnnotationSummaries = () => {
+            setCourseAnnotationSummaries(
+                courses.reduce((summaries, course) => {
+                    summaries[course.name] = getCourseAnnotationSummary(course.name);
+                    return summaries;
+                }, {})
+            );
+        };
+
+        updateAnnotationSummaries();
+        window.addEventListener(
+            'lessonAnnotationsUpdated',
+            updateAnnotationSummaries
+        );
+        return () => {
+            window.removeEventListener(
+                'lessonAnnotationsUpdated',
+                updateAnnotationSummaries
+            );
+        };
+    }, [courses]);
 
     // Autocomplete: show when typing # in search
     const autocompleteResults = React.useMemo(() => {
@@ -679,6 +704,14 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                         const progressSummary = getCourseProgressSummary(course, lessonProgress);
                         const matchingLessons = lessonSearchMatches[course.name] || [];
                         const addedDate = formatCourseAddedDate(course.addedAt);
+                        const annotationSummary =
+                            courseAnnotationSummaries[course.name] || {
+                                notes: 0,
+                                bookmarks: 0,
+                            };
+                        const hasAnnotations =
+                            annotationSummary.notes > 0 ||
+                            annotationSummary.bookmarks > 0;
 
                         return (
                             <div
@@ -711,6 +744,25 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
                                     </span>
                                 </div>
+                                {hasAnnotations && (
+                                    <div
+                                        className='course-annotation-summary'
+                                        aria-label={`${annotationSummary.notes} notes and ${annotationSummary.bookmarks} bookmarks`}
+                                    >
+                                        <span className='annotation-summary-item'>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                                            </svg>
+                                            {annotationSummary.notes} {annotationSummary.notes === 1 ? 'note' : 'notes'}
+                                        </span>
+                                        <span className='annotation-summary-item'>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                            {annotationSummary.bookmarks} {annotationSummary.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
+                                        </span>
+                                    </div>
+                                )}
                                 {progressSummary.totalLessons > 0 && progressSummary.activeLesson && (
                                     <div className='course-progress-summary'>
                                         <div className='course-progress-bar' aria-label={`${progressSummary.percentComplete}% complete`}>
