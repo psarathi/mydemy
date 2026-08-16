@@ -8,6 +8,7 @@ import {
     toggleFavorite,
     getFavorites,
     isFavorite,
+    getCourseAnnotationSummary,
     getLessonAnnotations,
     getMatchingNoteAnnotationsForCourse,
     saveLessonAnnotation,
@@ -533,6 +534,28 @@ describe('courseTracking utilities', () => {
                     courseName: 'React Basics',
                 }),
             ]);
+        });
+
+        test('summarizes note and bookmark counts for a course', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify({
+                    'React::lesson-1.mp4': [
+                        {id: 'a', type: 'note', timeSeconds: 3},
+                        {id: 'b', type: 'bookmark', timeSeconds: 5},
+                    ],
+                    'React::lesson-2.mp4': [
+                        {id: 'c', type: 'bookmark', timeSeconds: 8},
+                    ],
+                    'Node::lesson-1.mp4': [
+                        {id: 'd', type: 'note', timeSeconds: 13},
+                    ],
+                })
+            );
+
+            expect(getCourseAnnotationSummary('React')).toEqual({
+                notes: 1,
+                bookmarks: 2,
+            });
         });
 
         test('updates an existing annotation when id matches', () => {

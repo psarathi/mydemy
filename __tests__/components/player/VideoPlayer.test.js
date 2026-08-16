@@ -390,6 +390,20 @@ describe('VideoPlayer', () => {
         expect(video.play).toHaveBeenCalled();
     });
 
+    test('pauses the video before capturing a note', async () => {
+        const user = userEvent.setup();
+        const onCaptureNote = jest.fn();
+        render(<VideoPlayer {...defaultProps} onCaptureNote={onCaptureNote} />);
+
+        const video = document.querySelector('video');
+        Object.defineProperty(video, 'currentTime', {value: 67, writable: true});
+
+        await user.click(screen.getByLabelText('Add note at current timestamp'));
+
+        expect(video.pause).toHaveBeenCalled();
+        expect(onCaptureNote).toHaveBeenCalledWith(67);
+    });
+
     test('displays video duration when loaded', () => {
         render(<VideoPlayer {...defaultProps} />);
 

@@ -984,6 +984,24 @@ button {
     color: var(--text-tertiary);
 }
 
+.course-annotation-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.annotation-summary-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.annotation-summary-item svg {
+    color: var(--accent);
+}
+
 .course-progress-summary {
     display: flex;
     flex-direction: column;
