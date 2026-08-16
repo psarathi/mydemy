@@ -10,6 +10,7 @@ import {
     isFavorite,
     getCourseAnnotationSummary,
     getLessonAnnotations,
+    getMatchingNoteAnnotationsForCourse,
     saveLessonAnnotation,
     deleteLessonAnnotation,
     saveLessonProgress,
@@ -470,6 +471,71 @@ describe('courseTracking utilities', () => {
             ]);
         });
 
+        test('finds matching note annotations across a course', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify({
+                    'React Basics::intro.mp4': [
+                        {
+                            id: 'note-1',
+                            type: 'note',
+                            timeSeconds: 18,
+                            text: 'Remember how hooks compose state',
+                        },
+                        {
+                            id: 'bookmark-1',
+                            type: 'bookmark',
+                            timeSeconds: 20,
+                            text: 'hooks bookmark',
+                        },
+                    ],
+                    'React Basics::advanced.mp4': [
+                        {
+                            id: 'note-2',
+                            type: 'note',
+                            timeSeconds: 5,
+                            text: 'Context patterns',
+                        },
+                    ],
+                    'JavaScript Advanced::closures.mp4': [
+                        {
+                            id: 'note-3',
+                            type: 'note',
+                            timeSeconds: 12,
+                            text: 'hooks does not belong here',
+                        },
+                    ],
+                })
+            );
+
+            expect(
+                getMatchingNoteAnnotationsForCourse(
+                    {
+                        name: 'React Basics',
+                        topics: [
+                            {
+                                name: 'Foundations',
+                                files: [
+                                    {
+                                        name: 'Introduction',
+                                        fileName: 'intro.mp4',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    ['hooks']
+                )
+            ).toEqual([
+                expect.objectContaining({
+                    id: 'note-1',
+                    lessonPath: 'intro.mp4',
+                    lessonName: 'Introduction',
+                    topicName: 'Foundations',
+                    courseName: 'React Basics',
+                }),
+            ]);
+        });
+
         test('summarizes note and bookmark counts for a course', () => {
             localStorageMock.getItem.mockReturnValue(
                 JSON.stringify({
@@ -875,6 +941,12 @@ describe('courseTracking utilities', () => {
                 expect(getLessonAnnotations('React', 'lesson-1.mp4')).toEqual(
                     []
                 );
+                expect(
+                    getMatchingNoteAnnotationsForCourse(
+                        {name: 'React'},
+                        ['hooks']
+                    )
+                ).toEqual([]);
                 expect(
                     saveLessonAnnotation('React', 'lesson-1.mp4', {
                         type: 'note',

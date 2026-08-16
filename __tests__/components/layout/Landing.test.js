@@ -67,6 +67,7 @@ jest.mock('../../../utils/courseTracking', () => ({
         percentComplete: 0,
         activeLesson: null,
     })),
+    getMatchingNoteAnnotationsForCourse: jest.fn(() => []),
     getLessonProgress: jest.fn(() => ({})),
     pinCourseCollection: jest.fn(),
     removeCourseFromCollection: jest.fn(),
@@ -128,6 +129,8 @@ jest.mock('../../../hooks/useCourses', () => ({
 
 const mockUseSession = require('next-auth/react').useSession;
 const mockAddToHistory = require('../../../utils/courseTracking').addToHistory;
+const mockGetMatchingNoteAnnotationsForCourse =
+    require('../../../utils/courseTracking').getMatchingNoteAnnotationsForCourse;
 const mockGetCourseAnnotationSummary =
     require('../../../utils/courseTracking').getCourseAnnotationSummary;
 
@@ -140,6 +143,7 @@ describe('Landing', () => {
         jest.clearAllMocks();
         window.localStorage.clear();
         mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
+        mockGetMatchingNoteAnnotationsForCourse.mockReturnValue([]);
         mockGetCourseAnnotationSummary.mockImplementation((courseName) =>
             courseName === 'React Basics'
                 ? {notes: 2, bookmarks: 1}
@@ -152,7 +156,7 @@ describe('Landing', () => {
 
         expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
         expect(screen.getByTestId('hamburger-menu')).toBeInTheDocument();
-        expect(screen.getAllByTestId('switch-checkbox')).toHaveLength(2);
+        expect(screen.getAllByTestId('switch-checkbox')).toHaveLength(3);
     });
 
     test('displays all courses by default', () => {
@@ -401,6 +405,45 @@ describe('Landing', () => {
             'href',
             'JavaScript Advanced?topic=Async+Programming&lesson=Promise+chaining.mp4'
         );
+    });
+
+    test('shows matched note results when searching notes', async () => {
+        const courseTracking = require('../../../utils/courseTracking');
+        courseTracking.getMatchingNoteAnnotationsForCourse.mockImplementation(
+            (course, searchTermParts) => {
+                if (
+                    course.name === 'Node.js Fundamentals' &&
+                    searchTermParts.includes('streams')
+                ) {
+                    return [
+                        {
+                            id: 'note-1',
+                            lessonPath: 'streams.mp4',
+                            timeSeconds: 42,
+                            text: 'Review streams backpressure',
+                        },
+                    ];
+                }
+
+                return [];
+            }
+        );
+
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        const searchInput = screen.getByPlaceholderText(/Search courses/i);
+        const noteSearchToggle = screen.getAllByTestId('switch-checkbox')[2];
+
+        await user.click(noteSearchToggle);
+        await user.type(searchInput, 'streams');
+
+        await waitFor(() => {
+            expect(screen.getByText('Node.js Fundamentals')).toBeInTheDocument();
+            expect(screen.getByText('1 matched note')).toBeInTheDocument();
+            expect(screen.getByText('Review streams backpressure')).toBeInTheDocument();
+            expect(screen.queryByText('React Basics')).not.toBeInTheDocument();
+        });
     });
 
     test('cleans up event listeners on unmount', () => {
