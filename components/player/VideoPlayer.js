@@ -36,6 +36,7 @@ function VideoPlayer({
     videoFile,
     subtitlesFile,
     getNextVideo,
+    getPreviousVideo,
     startTime = 0,
     onProgress,
     onTimeUpdate,
@@ -60,6 +61,7 @@ function VideoPlayer({
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
     const [showAudioSettings, setShowAudioSettings] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
     const [captionsEnabled, setCaptionsEnabled] = useState(true);
     const [audioTracks, setAudioTracks] = useState([]);
     const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
@@ -126,6 +128,18 @@ function VideoPlayer({
         setShowCountdown(false);
         setNextVideoInfo(null);
     };
+
+    const skipToPreviousVideo = useCallback(() => {
+        if (!getPreviousVideo) {
+            return;
+        }
+        const previousVideo = getPreviousVideo();
+        pendingAutoplayVideo.current = previousVideo.name;
+        setCurrentVideo(previousVideo.name);
+        setCurrentSubtitle(previousVideo.subtitles);
+        setShowCountdown(false);
+        setNextVideoInfo(null);
+    }, [getPreviousVideo]);
 
     const cancelAutoplay = () => {
         setShowCountdown(false);
@@ -456,6 +470,81 @@ function VideoPlayer({
         return `${minutes}:${String(safeSeconds % 60).padStart(2, '0')}`;
     };
 
+    const togglePlayback = useCallback(() => {
+        if (!vp.current) {
+            return;
+        }
+        if (vp.current.paused) {
+            safePlay();
+            setIsPlaying(true);
+        } else {
+            vp.current.pause();
+            setIsPlaying(false);
+        }
+    }, [safePlay]);
+
+    const seekBySeconds = useCallback((deltaSeconds) => {
+        if (!vp.current) {
+            return;
+        }
+        const duration = Number.isFinite(vp.current.duration)
+            ? vp.current.duration
+            : Number.MAX_SAFE_INTEGER;
+        vp.current.currentTime = Math.max(
+            0,
+            Math.min(duration, (vp.current.currentTime || 0) + deltaSeconds)
+        );
+        reportProgress(true);
+    }, [reportProgress]);
+
+    useEffect(() => {
+        const isEditableTarget = (target) =>
+            target?.isContentEditable ||
+            ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName);
+
+        const handleKeyDown = (event) => {
+            if (isEditableTarget(event.target)) {
+                return;
+            }
+
+            const key = event.key.toLowerCase();
+            if (key === '?' || (event.shiftKey && event.key === '/')) {
+                event.preventDefault();
+                setShowShortcuts((isOpen) => !isOpen);
+                return;
+            }
+            if (key === ' ' || key === 'k') {
+                event.preventDefault();
+                togglePlayback();
+                return;
+            }
+            if (key === 'arrowright' || key === 'l') {
+                event.preventDefault();
+                seekBySeconds(10);
+                return;
+            }
+            if (key === 'arrowleft' || key === 'j') {
+                event.preventDefault();
+                seekBySeconds(-10);
+                return;
+            }
+            if (key === 'n') {
+                event.preventDefault();
+                skipToNextVideo();
+                return;
+            }
+            if (key === 'p') {
+                event.preventDefault();
+                skipToPreviousVideo();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [seekBySeconds, skipToPreviousVideo, togglePlayback]);
+
     return (
         <div className='modern-video-container'>
             {showCountdown && (
@@ -470,6 +559,36 @@ function VideoPlayer({
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
             />
+            {showShortcuts && (
+                <div
+                    className='shortcuts-help-modal'
+                    role='dialog'
+                    aria-modal='true'
+                    aria-label='Keyboard shortcuts'
+                >
+                    <div className='shortcuts-help-panel'>
+                        <div className='shortcuts-help-header'>
+                            <h3>Keyboard Shortcuts</h3>
+                            <button
+                                type='button'
+                                className='control-btn'
+                                onClick={() => setShowShortcuts(false)}
+                                aria-label='Close keyboard shortcuts'
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <dl className='shortcuts-help-list'>
+                            <div><dt>Space / K</dt><dd>Play or pause</dd></div>
+                            <div><dt>J / Left</dt><dd>Back 10 seconds</dd></div>
+                            <div><dt>L / Right</dt><dd>Forward 10 seconds</dd></div>
+                            <div><dt>N</dt><dd>Next lesson</dd></div>
+                            <div><dt>P</dt><dd>Previous lesson</dd></div>
+                            <div><dt>?</dt><dd>Show shortcuts</dd></div>
+                        </dl>
+                    </div>
+                </div>
+            )}
             <div className='video-header'>
                 <div className='video-info'>
                     <h2 className='video-title'>
@@ -479,15 +598,7 @@ function VideoPlayer({
                 <div className='video-controls'>
                     <button
                         className='control-btn'
-                        onClick={() => {
-                            if (vp.current.paused) {
-                                safePlay();
-                                setIsPlaying(true);
-                            } else {
-                                vp.current.pause();
-                                setIsPlaying(false);
-                            }
-                        }}
+                        onClick={togglePlayback}
                         aria-label='Toggle play/pause'
                     >
                         {isPlaying ? (
