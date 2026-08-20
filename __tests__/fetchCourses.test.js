@@ -2,9 +2,11 @@ const fs = require('node:fs/promises');
 const fetchCourses = require('../fetchCourses');
 const fetchCourseListingsV3 = require('../utilities/fetchCourseListingsV3');
 const { COURSES_FOLDER, COURSES_FILE_NAME } = require('../constants');
+const {createHlsAudioVariants} = require('../utilities/hlsAudio');
 
 jest.mock('node:fs/promises');
 jest.mock('../utilities/fetchCourseListingsV3');
+jest.mock('../utilities/hlsAudio', () => ({createHlsAudioVariants: jest.fn()}));
 
 describe('fetchCourses', () => {
     const mockCourses = [
@@ -36,7 +38,7 @@ describe('fetchCourses', () => {
         it('should fetch and save courses successfully', async () => {
             fetchCourseListingsV3.mockResolvedValue(mockCourses);
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(fetchCourseListingsV3).toHaveBeenCalledWith(
                 COURSES_FOLDER,
@@ -56,7 +58,7 @@ describe('fetchCourses', () => {
         it('should handle logging course details when requested', async () => {
             fetchCourseListingsV3.mockResolvedValue(mockCourses);
 
-            await fetchCourses([], true);
+            await fetchCourses({logCourseDetails: true});
 
             expect(fetchCourseListingsV3).toHaveBeenCalledWith(
                 COURSES_FOLDER,
@@ -65,6 +67,21 @@ describe('fetchCourses', () => {
                 true
             );
         });
+    });
+
+    it('generates HLS audio only when the caller opts in', async () => {
+        const courseWithVideo = [{
+            name: 'Course 1',
+            topics: [{name: 'Topic 1', files: [{fileName: 'lesson.mp4'}]}],
+        }];
+        fetchCourseListingsV3.mockResolvedValue(courseWithVideo);
+        createHlsAudioVariants.mockResolvedValue({created: true, hasHls: true});
+
+        await fetchCourses({generateHlsAudio: true});
+
+        expect(createHlsAudioVariants).toHaveBeenCalledWith(
+            `${COURSES_FOLDER}/Course 1/Topic 1/lesson.mp4`
+        );
     });
 
     describe('No courses found - preservation logic', () => {
@@ -77,7 +94,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockResolvedValue(JSON.stringify(existingCourses));
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleWarnSpy).toHaveBeenCalledWith(
                 '⚠️  No courses fetched from CDN, but preserving existing courses.json with',
@@ -91,7 +108,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockRejectedValue(new Error('ENOENT: File not found'));
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleErrorSpy).toHaveBeenCalledWith(
                 '❌ No courses found and no existing courses.json to fall back to!'
@@ -111,7 +128,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockResolvedValue('[]');
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(processExitSpy).toHaveBeenCalledWith(1);
         });
@@ -120,7 +137,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockResolvedValue('invalid json');
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(processExitSpy).toHaveBeenCalledWith(1);
         });
@@ -135,7 +152,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue(newCourses);
             fs.readFile.mockResolvedValue(JSON.stringify(existingCourses));
 
-            await fetchCourses(coursesToProcess, false);
+            await fetchCourses({coursesToProcess});
 
             expect(fs.writeFile).toHaveBeenCalledWith(
                 COURSES_FILE_NAME,
@@ -151,7 +168,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue(newCourses);
             fs.readFile.mockResolvedValue(JSON.stringify(existingCourses));
 
-            await fetchCourses(coursesToProcess, false);
+            await fetchCourses({coursesToProcess});
 
             expect(fs.readFile).toHaveBeenCalledWith(COURSES_FILE_NAME, 'utf-8');
             expect(fs.writeFile).toHaveBeenCalledWith(
@@ -174,7 +191,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockRejectedValue(new Error('No file'));
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleErrorSpy).toHaveBeenCalledWith(
                 '   1. CDN is accessible at:',
@@ -188,7 +205,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockRejectedValue(new Error('No file'));
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleErrorSpy).toHaveBeenCalledWith(
                 '   1. CDN is accessible at:',
@@ -206,7 +223,7 @@ describe('fetchCourses', () => {
 
             fetchCourseListingsV3.mockResolvedValue(manyCourses);
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleLogSpy).toHaveBeenCalledWith('592 courses were found');
         });
@@ -215,7 +232,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue([]);
             fs.readFile.mockRejectedValue(new Error('No file'));
 
-            await fetchCourses([], false);
+            await fetchCourses({});
 
             expect(consoleLogSpy).toHaveBeenCalledWith('0 courses were found');
         });
@@ -226,7 +243,7 @@ describe('fetchCourses', () => {
             fetchCourseListingsV3.mockResolvedValue(mockCourses);
             fs.writeFile.mockRejectedValue(new Error('Permission denied'));
 
-            await expect(fetchCourses([], false)).rejects.toThrow('Permission denied');
+            await expect(fetchCourses({})).rejects.toThrow('Permission denied');
         });
     });
 
@@ -234,7 +251,7 @@ describe('fetchCourses', () => {
         it('should handle fetch errors', async () => {
             fetchCourseListingsV3.mockRejectedValue(new Error('Network error'));
 
-            await expect(fetchCourses([], false)).rejects.toThrow('Network error');
+            await expect(fetchCourses({})).rejects.toThrow('Network error');
         });
     });
 });

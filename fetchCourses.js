@@ -3,10 +3,32 @@ const path = require('path');
 const {COURSES_FOLDER, COURSES_FILE_NAME} = require('./constants');
 const fetchCourseListingsV2 = require('./utilities/fetchCourseListingsV2');
 const fetchCourseListingsV3 = require('./utilities/fetchCourseListingsV3');
-const fetchCourses = async (
+const {createHlsAudioVariants} = require('./utilities/hlsAudio');
+
+async function generateHlsAudioForCourses(courses) {
+    const videoPaths = courses.flatMap((course) =>
+        course.topics.flatMap((topic) => topic.files.map((file) =>
+            topic.isTopicLess
+                ? path.join(COURSES_FOLDER, course.name, file.fileName)
+                : path.join(COURSES_FOLDER, course.name, topic.name, file.fileName)
+        ))
+    );
+    let generated = 0;
+    for (const videoPath of videoPaths) {
+        try {
+            const result = await createHlsAudioVariants(videoPath);
+            if (result.created) generated += 1;
+        } catch (error) {
+            console.warn(`⚠️  Could not generate HLS audio for ${videoPath}: ${error.message}`);
+        }
+    }
+    if (generated) console.log(`✓ Generated HLS audio playlists for ${generated} videos`);
+}
+const fetchCourses = async ({
     coursesToProcess = [],
-    logCourseDetails = false
-) => {
+    logCourseDetails = false,
+    generateHlsAudio = false,
+} = {}) => {
     console.log('fetching courses...');
     const currentDirectory = path.join(COURSES_FOLDER);
     let courses = await fetchCourseListingsV3(
@@ -16,6 +38,10 @@ const fetchCourses = async (
         logCourseDetails
     );
     console.log(`${courses.length} courses were found`);
+
+    // Remuxing is CPU and disk intensive, so callers opt in per processing
+    // run—for example, when handling a newly uploaded course.
+    if (generateHlsAudio) await generateHlsAudioForCourses(courses);
 
     // If no courses found, check if we should preserve existing file
     if (courses.length === 0) {

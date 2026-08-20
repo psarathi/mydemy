@@ -11,8 +11,10 @@ import {
     addCourseToCollection,
     formatProgressTime,
     getCourseCollections,
+    getCourseAnnotationSummary,
     getCourseResumeUrl,
     getCourseProgressSummary,
+    getMatchingNoteAnnotationsForCourse,
     getLessonProgress,
     pinCourseCollection,
     removeCourseFromCollection,
@@ -57,6 +59,30 @@ const getMatchingLessonsForCourse = (course, searchTermParts, exactSearch) => {
     );
 };
 
+export const formatCourseAddedDate = (addedAt) => {
+    if (!addedAt) return '';
+
+    const date = new Date(addedAt);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(date);
+};
+
+const getCourseAddedTime = (course) => {
+    const timestamp = new Date(course.addedAt || 0).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+export const sortCoursesByAddedDateDesc = (courses) =>
+    [...courses].sort((a, b) => {
+        const addedDateComparison = getCourseAddedTime(b) - getCourseAddedTime(a);
+        return addedDateComparison || a.name.localeCompare(b.name);
+    });
+
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
 
@@ -73,6 +99,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [courseList, setCourseList] = useState([]);
     const [exactSearch, setExactSearch] = useState(exact);
     const [searchInLessons, setSearchInLessons] = useState(false);
+    const [searchInNotes, setSearchInNotes] = useState(false);
+    const [noteAnnotationsVersion, setNoteAnnotationsVersion] = useState(0);
     const [previewCourse, setPreviewCourse] = useState({});
     const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
     const [activeTags, setActiveTags] = useState([]);
@@ -80,6 +108,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [tagFilterMode, setTagFilterMode] = useState('OR');
     const [allTagCounts, setAllTagCounts] = useState([]);
     const [collections, setCollections] = useState([]);
+    const [courseAnnotationSummaries, setCourseAnnotationSummaries] = useState({});
     const [activeCollectionId, setActiveCollectionId] = useState('');
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
@@ -112,6 +141,33 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             return matches;
         }, {});
     }, [courses, exactSearch, searchInLessons, searchTerm, searchTermParts]);
+
+    const noteSearchMatches = React.useMemo(() => {
+        if (!searchInNotes || !searchTerm || searchTerm.startsWith('#')) {
+            return {};
+        }
+
+        return courses.reduce((matches, course) => {
+            const matchingNotes = getMatchingNoteAnnotationsForCourse(
+                course,
+                searchTermParts,
+                exactSearch
+            );
+
+            if (matchingNotes.length > 0) {
+                matches[course.name] = matchingNotes;
+            }
+
+            return matches;
+        }, {});
+    }, [
+        courses,
+        exactSearch,
+        noteAnnotationsVersion,
+        searchInNotes,
+        searchTerm,
+        searchTermParts,
+    ]);
 
     // Expose refresh function to parent
     useEffect(() => {
@@ -161,6 +217,23 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     }, []);
 
     useEffect(() => {
+        const handleLessonAnnotationsUpdated = () => {
+            setNoteAnnotationsVersion((version) => version + 1);
+        };
+
+        window.addEventListener(
+            'lessonAnnotationsUpdated',
+            handleLessonAnnotationsUpdated
+        );
+        return () => {
+            window.removeEventListener(
+                'lessonAnnotationsUpdated',
+                handleLessonAnnotationsUpdated
+            );
+        };
+    }, []);
+
+    useEffect(() => {
         setCollections(getCourseCollections());
 
         const handleCollectionsUpdated = (event) => {
@@ -186,6 +259,29 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             );
         };
     }, []);
+
+    useEffect(() => {
+        const updateAnnotationSummaries = () => {
+            setCourseAnnotationSummaries(
+                courses.reduce((summaries, course) => {
+                    summaries[course.name] = getCourseAnnotationSummary(course.name);
+                    return summaries;
+                }, {})
+            );
+        };
+
+        updateAnnotationSummaries();
+        window.addEventListener(
+            'lessonAnnotationsUpdated',
+            updateAnnotationSummaries
+        );
+        return () => {
+            window.removeEventListener(
+                'lessonAnnotationsUpdated',
+                updateAnnotationSummaries
+            );
+        };
+    }, [courses]);
 
     // Autocomplete: show when typing # in search
     const autocompleteResults = React.useMemo(() => {
@@ -258,6 +354,18 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                     exactSearch
                 );
 
+                const noteMatch =
+                    searchInNotes &&
+                    getMatchingNoteAnnotationsForCourse(
+                        c,
+                        searchTermParts,
+                        exactSearch
+                    ).length > 0;
+
+                if (noteMatch) {
+                    return true;
+                }
+
                 // If searching in lessons, also check lesson names
                 if (searchInLessons && !courseNameMatch) {
                     return getMatchingLessonsForCourse(c, searchTermParts, exactSearch)
@@ -275,8 +383,8 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             });
         }
 
-        setCourseList(filtered);
-    }, [searchTerm, searchTermParts, exactSearch, searchInLessons, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
+        setCourseList(sortCoursesByAddedDateDesc(filtered));
+    }, [searchTerm, searchTermParts, exactSearch, searchInLessons, searchInNotes, noteAnnotationsVersion, courses, activeTags, tagFilterMode, activeCollectionId, collections]);
 
     useEffect(() => {
         function handleTagClick(event) {
@@ -534,6 +642,13 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                             />
                             <span className='toggle-label'>Search in lessons</span>
                         </label>
+                        <label className='exact-search-toggle'>
+                            <SwitchCheckbox
+                                initialState={searchInNotes}
+                                callback={setSearchInNotes}
+                            />
+                            <span className='toggle-label'>Search in notes</span>
+                        </label>
                     </div>
                 </div>
 
@@ -654,6 +769,16 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                     {courseList.map((course, i) => {
                         const progressSummary = getCourseProgressSummary(course, lessonProgress);
                         const matchingLessons = lessonSearchMatches[course.name] || [];
+                        const matchingNotes = noteSearchMatches[course.name] || [];
+                        const addedDate = formatCourseAddedDate(course.addedAt);
+                        const annotationSummary =
+                            courseAnnotationSummaries[course.name] || {
+                                notes: 0,
+                                bookmarks: 0,
+                            };
+                        const hasAnnotations =
+                            annotationSummary.notes > 0 ||
+                            annotationSummary.bookmarks > 0;
 
                         return (
                             <div
@@ -665,6 +790,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                 <Link href={`/${course.name}`} className='course-title-link' onClick={() => handleCourseClick(course)}>
                                     <h3 className='course-title'>{course.name}</h3>
                                 </Link>
+                                {addedDate && (
+                                    <div className='course-added-date'>
+                                        Added {addedDate}
+                                    </div>
+                                )}
                                 <div className='course-stats'>
                                     <span className='stat'>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -681,6 +811,25 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                         {course.topics?.reduce((a, t) => a + (t.files?.filter(f => SUPPORTED_VIDEO_EXTENSIONS.includes(f.ext)).length || 0), 0) || 0} lessons
                                     </span>
                                 </div>
+                                {hasAnnotations && (
+                                    <div
+                                        className='course-annotation-summary'
+                                        aria-label={`${annotationSummary.notes} notes and ${annotationSummary.bookmarks} bookmarks`}
+                                    >
+                                        <span className='annotation-summary-item'>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                                            </svg>
+                                            {annotationSummary.notes} {annotationSummary.notes === 1 ? 'note' : 'notes'}
+                                        </span>
+                                        <span className='annotation-summary-item'>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                            {annotationSummary.bookmarks} {annotationSummary.bookmarks === 1 ? 'bookmark' : 'bookmarks'}
+                                        </span>
+                                    </div>
+                                )}
                                 {progressSummary.totalLessons > 0 && progressSummary.activeLesson && (
                                     <div className='course-progress-summary'>
                                         <div className='course-progress-bar' aria-label={`${progressSummary.percentComplete}% complete`}>
@@ -719,6 +868,32 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                             >
                                                 <span className='course-lesson-match-topic'>{match.topicName}</span>
                                                 <span className='course-lesson-match-name'>{match.lessonName}</span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                                {matchingNotes.length > 0 && (
+                                    <div className='course-lesson-matches'>
+                                        <div className='course-lesson-matches-header'>
+                                            {matchingNotes.length} matched {matchingNotes.length === 1 ? 'note' : 'notes'}
+                                        </div>
+                                        {matchingNotes.slice(0, 3).map((match) => (
+                                            <Link
+                                                key={`${match.lessonPath}-${match.id}`}
+                                                passHref
+                                                href={{
+                                                    pathname: course.name,
+                                                    query: {
+                                                        topic: match.topicName,
+                                                        lesson: match.lessonName,
+                                                        t: match.timeSeconds,
+                                                    },
+                                                }}
+                                                className='course-lesson-match-link'
+                                                onClick={() => handleCourseClick(course)}
+                                            >
+                                                <span className='course-lesson-match-topic'>{formatProgressTime(match.timeSeconds)}</span>
+                                                <span className='course-lesson-match-name'>{match.text}</span>
                                             </Link>
                                         ))}
                                     </div>

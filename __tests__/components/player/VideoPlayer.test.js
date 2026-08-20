@@ -27,6 +27,19 @@ jest.mock('../../../components/player/VideoSettings', () => {
     };
 });
 
+jest.mock('../../../components/player/AudioSettings', () => {
+    return function MockAudioSettings({ isOpen, onClose, captionsEnabled, onCaptionsChange }) {
+        if (!isOpen) return null;
+        return (
+            <div data-testid="audio-settings">
+                <span>{captionsEnabled ? 'Captions on' : 'Captions off'}</span>
+                <button onClick={() => onCaptionsChange(false)}>Disable captions</button>
+                <button onClick={onClose}>Close audio settings</button>
+            </div>
+        );
+    };
+});
+
 describe('VideoPlayer', () => {
     const mockGetNextVideo = jest.fn();
     const defaultProps = {
@@ -100,6 +113,26 @@ describe('VideoPlayer', () => {
         expect(settingsButton).toBeInTheDocument();
     });
 
+    test('opens audio and subtitles settings', async () => {
+        const user = userEvent.setup();
+        render(<VideoPlayer {...defaultProps} />);
+
+        await user.click(screen.getByLabelText('Audio and subtitles settings'));
+
+        expect(screen.getByTestId('audio-settings')).toBeInTheDocument();
+        expect(screen.getByText('Captions on')).toBeInTheDocument();
+    });
+
+    test('allows captions to be disabled from audio settings', async () => {
+        const user = userEvent.setup();
+        render(<VideoPlayer {...defaultProps} />);
+
+        await user.click(screen.getByLabelText('Audio and subtitles settings'));
+        await user.click(screen.getByText('Disable captions'));
+
+        expect(screen.getByText('Captions off')).toBeInTheDocument();
+    });
+
     test('opens settings modal when settings button is clicked', async () => {
         const user = userEvent.setup();
         render(<VideoPlayer {...defaultProps} />);
@@ -168,6 +201,28 @@ describe('VideoPlayer', () => {
         expect(screen.queryByTestId('autoplay-countdown')).not.toBeInTheDocument();
     });
 
+    test('waits for next source to render before playing from countdown', async () => {
+        const user = userEvent.setup();
+        const playedSources = [];
+        window.HTMLMediaElement.prototype.play = jest.fn(() => {
+            playedSources.push(document.querySelector('source')?.getAttribute('src'));
+            return Promise.resolve();
+        });
+        render(<VideoPlayer {...defaultProps} />);
+        playedSources.length = 0;
+
+        const video = document.querySelector('video');
+        fireEvent.ended(video);
+
+        await user.click(screen.getByText('Play Now'));
+        await waitFor(() => {
+            expect(playedSources.some((src) => src?.includes('useState.mp4'))).toBe(true);
+        });
+        expect(playedSources).not.toContain(
+            expect.stringContaining('intro.mp4')
+        );
+    });
+
     test('shows next video button when clicking next', async () => {
         const user = userEvent.setup();
         render(<VideoPlayer {...defaultProps} />);
@@ -187,6 +242,31 @@ describe('VideoPlayer', () => {
         video.play.mockClear();
 
         rerender(<VideoPlayer {...defaultProps} startTime={42} />);
+
+        expect(video.load).not.toHaveBeenCalled();
+        expect(video.play).not.toHaveBeenCalled();
+        expect(document.querySelector('source').getAttribute('src')).toContain('intro.mp4');
+    });
+
+    test('does not reload the same video when parent callbacks change', () => {
+        const firstGetNextVideo = jest.fn(() => ({
+            name: 'courses/react/hooks/useState.mp4',
+            subtitles: 'courses/react/hooks/useState.vtt',
+        }));
+        const secondGetNextVideo = jest.fn(() => ({
+            name: 'courses/react/hooks/useEffect.mp4',
+            subtitles: 'courses/react/hooks/useEffect.vtt',
+        }));
+        const {rerender} = render(
+            <VideoPlayer {...defaultProps} getNextVideo={firstGetNextVideo} />
+        );
+        const video = document.querySelector('video');
+        video.load.mockClear();
+        video.play.mockClear();
+
+        rerender(
+            <VideoPlayer {...defaultProps} getNextVideo={secondGetNextVideo} />
+        );
 
         expect(video.load).not.toHaveBeenCalled();
         expect(video.play).not.toHaveBeenCalled();
@@ -308,6 +388,20 @@ describe('VideoPlayer', () => {
         await user.click(playPauseButton);
 
         expect(video.play).toHaveBeenCalled();
+    });
+
+    test('pauses the video before capturing a note', async () => {
+        const user = userEvent.setup();
+        const onCaptureNote = jest.fn();
+        render(<VideoPlayer {...defaultProps} onCaptureNote={onCaptureNote} />);
+
+        const video = document.querySelector('video');
+        Object.defineProperty(video, 'currentTime', {value: 67, writable: true});
+
+        await user.click(screen.getByLabelText('Add note at current timestamp'));
+
+        expect(video.pause).toHaveBeenCalled();
+        expect(onCaptureNote).toHaveBeenCalledWith(67);
     });
 
     test('displays video duration when loaded', () => {

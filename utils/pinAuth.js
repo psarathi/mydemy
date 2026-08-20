@@ -1,6 +1,7 @@
 const USERS_KEY = 'mydemyPinUsers:v1';
 const ACTIVE_USER_KEY = 'mydemyActiveUser:v1';
 const FAILED_ATTEMPTS_KEY = 'mydemyPinFailures:v1';
+const PIN_USERS_API = '/api/pin-users';
 const LOCKOUT_LIMIT = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
 let currentActiveUserId = 'guest';
@@ -60,6 +61,37 @@ const savePinUsers = (users) => {
     if (!storage) return;
     storage.setItem(USERS_KEY, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('pinUsersUpdated', {detail: {users}}));
+};
+
+const canUsePinUsersApi = () => typeof fetch === 'function' && typeof window !== 'undefined';
+
+const persistPinUsers = async (users) => {
+    if (!canUsePinUsersApi()) return;
+    await fetch(PIN_USERS_API, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({users}),
+    });
+};
+
+export const hydratePinUsersFromDatabase = async () => {
+    const storage = getStorage();
+    const cachedUsers = getPinUsers();
+    if (!storage || !canUsePinUsersApi()) return cachedUsers;
+
+    const response = await fetch(PIN_USERS_API);
+    if (!response.ok) return cachedUsers;
+
+    const {users = []} = await response.json();
+    if (!Array.isArray(users)) return cachedUsers;
+
+    if (users.length === 0 && cachedUsers.length > 0) {
+        await persistPinUsers(cachedUsers);
+        return cachedUsers;
+    }
+
+    savePinUsers(users);
+    return users;
 };
 
 export const getActiveUserId = () => {
@@ -128,10 +160,12 @@ export const createOrUpdatePinUser = async ({
 
     if (!nextUser.pinHash) throw new Error('PIN is required');
 
-    savePinUsers([
+    const nextUsers = [
         ...users.filter((user) => user.id !== nextUser.id && user.username !== cleanUsername),
         nextUser,
-    ]);
+    ];
+    savePinUsers(nextUsers);
+    await persistPinUsers(nextUsers);
     return nextUser;
 };
 

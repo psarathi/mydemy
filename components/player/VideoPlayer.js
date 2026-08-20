@@ -2,6 +2,35 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getCdnBase, VIDEO_MIME_TYPES } from '../../constants';
 import AutoplayCountdown from './AutoplayCountdown';
 import VideoSettings from './VideoSettings';
+import AudioSettings from './AudioSettings';
+import Hls from 'hls.js';
+import {isEnglishAudioLanguage} from '../../utilities/audioLanguage';
+
+function getHlsAudioTracks(manifest) {
+    return manifest
+        .split('\n')
+        .filter((line) => line.startsWith('#EXT-X-MEDIA:TYPE=AUDIO'))
+        .map((line, index) => {
+            const attribute = (name) =>
+                line.match(new RegExp(`${name}="([^"]+)"`))?.[1];
+            const language = attribute('LANGUAGE');
+            let label = attribute('NAME') || language || `Audio track ${index + 1}`;
+            if (language && typeof Intl?.DisplayNames === 'function') {
+                try {
+                    label = new Intl.DisplayNames([navigator.language], {
+                        type: 'language',
+                    }).of(language) || label;
+                } catch (_) {
+                    // Keep the manifest label when the language code is invalid.
+                }
+            }
+            return {
+                id: String(index),
+                label,
+                enabled: false,
+            };
+        });
+}
 
 function VideoPlayer({
     videoFile,
@@ -20,6 +49,9 @@ function VideoPlayer({
     const startTimeRef = useRef(startTime);
     const onProgressRef = useRef(onProgress);
     const [currentVideo, setCurrentVideo] = useState(videoFile);
+    const hlsManifestFile = currentVideo
+        ? `${currentVideo}.hls/master.m3u8`
+        : '';
     const [currentSubtitle, setCurrentSubtitle] = useState(subtitlesFile);
     const [videoDuration, setVideoDuration] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
@@ -27,7 +59,24 @@ function VideoPlayer({
     const [nextVideoInfo, setNextVideoInfo] = useState(null);
     const [countdownDuration, setCountdownDuration] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+    const [showAudioSettings, setShowAudioSettings] = useState(false);
+    const [captionsEnabled, setCaptionsEnabled] = useState(true);
+    const [audioTracks, setAudioTracks] = useState([]);
+    const [selectedAudioTrack, setSelectedAudioTrack] = useState('original');
+    const [hlsStatus, setHlsStatus] = useState('idle');
+    const hls = useRef(null);
+    const hlsActive = useRef(false);
+    const hlsDefaultAudioSelected = useRef(false);
+    const pendingAutoplayVideo = useRef(null);
     const [captureSeconds, setCaptureSeconds] = useState(0);
+
+    const captureNote = () => {
+        if (vp.current) {
+            vp.current.pause();
+            setIsPlaying(false);
+        }
+        onCaptureNote(getCurrentSeconds());
+    };
 
     // Mobile browsers reject play() when autoplay-with-audio is blocked
     // (NotAllowedError). Swallow that rejection so it doesn't surface as an
@@ -61,31 +110,21 @@ function VideoPlayer({
 
     const playNextVideo = () => {
         if (nextVideoInfo) {
+            pendingAutoplayVideo.current = nextVideoInfo.name;
             setCurrentVideo(nextVideoInfo.name);
             setCurrentSubtitle(nextVideoInfo.subtitles);
             setShowCountdown(false);
             setNextVideoInfo(null);
-            setTimeout(() => {
-                if (vp.current) {
-                    vp.current.load();
-                    safePlay();
-                }
-            }, 100);
         }
     };
 
     const skipToNextVideo = () => {
         const nextVideo = getNextVideo();
+        pendingAutoplayVideo.current = nextVideo.name;
         setCurrentVideo(nextVideo.name);
         setCurrentSubtitle(nextVideo.subtitles);
         setShowCountdown(false);
         setNextVideoInfo(null);
-        setTimeout(() => {
-            if (vp.current) {
-                vp.current.load();
-                safePlay();
-            }
-        }, 100);
     };
 
     const cancelAutoplay = () => {
@@ -105,14 +144,16 @@ function VideoPlayer({
         return {topic, lesson};
     };
 
-    const addTrack = () => {
-        if (!vp.current || !currentSubtitle) {
+    const addTrack = useCallback(() => {
+        if (!vp.current) {
             return;
         }
-        // getVideoDuration();
         let existingTrack = vp.current.getElementsByTagName('track')[0];
         if (existingTrack) {
             existingTrack.remove();
+        }
+        if (!currentSubtitle) {
+            return;
         }
         let track = document.createElement('track');
         track.kind = 'captions';
@@ -120,21 +161,153 @@ function VideoPlayer({
         track.srclang = 'en';
         track.src = `${getCdnBase()}/${currentSubtitle}`;
         track.addEventListener('load', function () {
-            this.mode = 'showing';
+            this.mode = captionsEnabled ? 'showing' : 'disabled';
             if (
                 vp.current &&
                 vp.current.textTracks &&
                 vp.current.textTracks[0]
             ) {
-                vp.current.textTracks[0].mode = 'showing'; // thanks Firefox
+                vp.current.textTracks[0].mode = captionsEnabled
+                    ? 'showing'
+                    : 'disabled'; // thanks Firefox
             }
         });
         track.default = true;
         vp.current.appendChild(track);
         if (vp.current.textTracks && vp.current.textTracks[0]) {
-            vp.current.textTracks[0].mode = 'showing';
+            vp.current.textTracks[0].mode = captionsEnabled
+                ? 'showing'
+                : 'disabled';
+        }
+    }, [captionsEnabled, currentSubtitle]);
+
+    const syncAudioTracks = useCallback(() => {
+        // hls.js owns the track list for HLS playback. Chromium exposes no
+        // equivalent native AudioTrackList, so do not overwrite the manifest
+        // tracks when video metadata arrives.
+        if (hls.current) return;
+        if (!vp.current || !vp.current.audioTracks) {
+            setAudioTracks([]);
+            setSelectedAudioTrack('original');
+            return;
+        }
+
+        const tracks = Array.from(vp.current.audioTracks).map((track, index) => ({
+            id: String(index),
+            label: track.label || track.language || `Audio track ${index + 1}`,
+            enabled: track.enabled,
+        }));
+        setAudioTracks(tracks);
+        const activeTrack = tracks.find((track) => track.enabled);
+        setSelectedAudioTrack(activeTrack ? activeTrack.id : tracks[0]?.id || 'original');
+    }, []);
+
+    const handleCaptionsChange = (enabled) => {
+        setCaptionsEnabled(enabled);
+        if (vp.current?.textTracks?.[0]) {
+            vp.current.textTracks[0].mode = enabled ? 'showing' : 'disabled';
         }
     };
+
+    const handleAudioTrackChange = (trackId) => {
+        setSelectedAudioTrack(trackId);
+        if (hls.current) {
+            hls.current.audioTrack = Number(trackId);
+            return;
+        }
+        if (!vp.current?.audioTracks) return;
+        Array.from(vp.current.audioTracks).forEach((track, index) => {
+            track.enabled = String(index) === trackId;
+        });
+    };
+
+    useEffect(() => {
+        const supportsNativeHls = vp.current?.canPlayType('application/vnd.apple.mpegurl');
+        const supportsHlsJs = Hls.isSupported();
+        if (!vp.current || !hlsManifestFile) return;
+        if (!supportsHlsJs && !supportsNativeHls) {
+            setHlsStatus('unsupported');
+            return;
+        }
+        const controller = new AbortController();
+        const manifestUrl = `${getCdnBase()}/${hlsManifestFile}`;
+        const loadOriginalVideo = () => {
+            if (!vp.current) return;
+            hls.current?.destroy();
+            hls.current = null;
+            hlsActive.current = false;
+            vp.current.removeAttribute('src');
+            vp.current.load();
+        };
+        // Chromium can claim native HLS MIME support but does not expose its
+        // alternate audio tracks. Prefer hls.js whenever Media Source is
+        // available; reserve native HLS for Safari and similar browsers.
+        setHlsStatus('loading');
+        fetch(manifestUrl)
+            .then((response) => {
+                if (!response.ok) throw new Error('HLS playlist not found');
+                return response.text();
+            })
+            .then((manifest) => {
+                if (controller.signal.aborted || !vp.current) return;
+                if (!supportsHlsJs && supportsNativeHls) {
+                    setHlsStatus('native-loading');
+                    hlsActive.current = true;
+                    vp.current.src = manifestUrl;
+                    vp.current.load();
+                    return;
+                }
+                const instance = new Hls();
+                hls.current = instance;
+                hlsActive.current = true;
+                hlsDefaultAudioSelected.current = false;
+                setAudioTracks(getHlsAudioTracks(manifest));
+                const updateAudioTracks = (tracks) => {
+                    setAudioTracks(tracks.map((track, index) => ({
+                        id: String(index),
+                        label: track.name || track.lang || `Audio track ${index + 1}`,
+                        enabled: index === instance.audioTrack,
+                    })));
+                    setSelectedAudioTrack(String(instance.audioTrack));
+                };
+                instance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    updateAudioTracks(instance.audioTracks);
+                    setHlsStatus('ready');
+                });
+                instance.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+                    if (!hlsDefaultAudioSelected.current) {
+                        const preferredTrack = data.audioTracks.findIndex((track) =>
+                            isEnglishAudioLanguage(track.lang)
+                        );
+                        if (preferredTrack >= 0) {
+                            instance.audioTrack = preferredTrack;
+                            hlsDefaultAudioSelected.current = true;
+                        }
+                    }
+                    updateAudioTracks(data.audioTracks);
+                });
+                instance.on(Hls.Events.ERROR, (_, data) => {
+                    setHlsStatus(`error-${data.type}-${data.details}`);
+                    if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        loadOriginalVideo();
+                    }
+                });
+                instance.loadSource(manifestUrl);
+                instance.attachMedia(vp.current);
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) {
+                    setHlsStatus('fallback');
+                    loadOriginalVideo();
+                }
+            });
+        return () => {
+            controller.abort();
+            hls.current?.destroy();
+            hls.current = null;
+            hlsActive.current = false;
+        };
+    }, [hlsManifestFile]);
 
     const getVideoName = () => {
         if (!currentVideo) {
@@ -149,9 +322,9 @@ function VideoPlayer({
     };
 
     useEffect(() => {
-        //due to some reason, the onLoadStart is not being called when the page loads, hence this effect
+        // Some browsers do not fire onLoadStart on the initial page load.
         addTrack();
-    });
+    }, [addTrack]);
 
     useEffect(() => {
         // Load autoplay countdown duration from localStorage
@@ -193,8 +366,25 @@ function VideoPlayer({
         setCurrentSubtitle(subtitlesFile);
         seekTarget.current = {videoFile, startTime: startTimeRef.current};
         lastProgressReport.current = 0;
-        endHandler(true);
-    }, [videoFile, subtitlesFile, endHandler]);
+        if (vp.current && !hlsActive.current) {
+            vp.current.load();
+            safePlay();
+        }
+    }, [videoFile, subtitlesFile, safePlay]);
+
+    useEffect(() => {
+        if (
+            !pendingAutoplayVideo.current ||
+            pendingAutoplayVideo.current !== currentVideo ||
+            !vp.current ||
+            hlsActive.current
+        ) {
+            return;
+        }
+        pendingAutoplayVideo.current = null;
+        vp.current.load();
+        safePlay();
+    }, [currentVideo, safePlay]);
 
     useEffect(() => {
         if (vp.current && typeof seekToSeconds === 'number') {
@@ -366,7 +556,7 @@ function VideoPlayer({
                     {onCaptureNote && (
                         <button
                             className='control-btn'
-                            onClick={() => onCaptureNote(getCurrentSeconds())}
+                            onClick={captureNote}
                             aria-label='Add note at current timestamp'
                             title='Add note at current timestamp'
                         >
@@ -388,6 +578,31 @@ function VideoPlayer({
                             Capture at {formatTimestamp(captureSeconds)}
                         </span>
                     )}
+                    <div className='audio-settings-control'>
+                        <button
+                            className='control-btn'
+                            onClick={() => setShowAudioSettings((isOpen) => !isOpen)}
+                            aria-label='Audio and subtitles settings'
+                            aria-expanded={showAudioSettings}
+                            title='Audio and subtitles'
+                        >
+                            <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                                <path d='M11 5 6 9H2v6h4l5 4V5Z'></path>
+                                <path d='M15.54 8.46a5 5 0 0 1 0 7.07'></path>
+                                <path d='M19.07 4.93a10 10 0 0 1 0 14.14'></path>
+                            </svg>
+                        </button>
+                        <AudioSettings
+                            isOpen={showAudioSettings}
+                            onClose={() => setShowAudioSettings(false)}
+                            captionsAvailable={Boolean(currentSubtitle)}
+                            captionsEnabled={captionsEnabled}
+                            onCaptionsChange={handleCaptionsChange}
+                            audioTracks={audioTracks}
+                            selectedAudioTrack={selectedAudioTrack}
+                            onAudioTrackChange={handleAudioTrackChange}
+                        />
+                    </div>
                     <button
                         className='control-btn'
                         onClick={() => setShowSettings(true)}
@@ -425,7 +640,7 @@ function VideoPlayer({
                 </div>
             </div>
 
-            <div className='video-player-wrapper'>
+            <div className='video-player-wrapper' data-hls-status={hlsStatus}>
                 <div className='video-aspect-container'>
                     {currentVideo ? (
                         <video
@@ -440,7 +655,10 @@ function VideoPlayer({
                             onTimeUpdate={handleTimeUpdate}
                             ref={vp}
                             onLoadStart={addTrack}
-                            onLoadedMetadata={getVideoDuration}
+                            onLoadedMetadata={() => {
+                                getVideoDuration();
+                                syncAudioTracks();
+                            }}
                             onEnded={() => {
                                 reportProgress(true);
                                 endHandler();

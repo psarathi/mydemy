@@ -8,11 +8,20 @@ const VIDEO_FILE_EXTENSIONS = new Set([
     '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv',
     '.webm', '.m4v', '.mpeg', '.mpg', '.3gp', '.ogv', '.ts'
 ]);
-const EXCLUDED_DIRECTORY = '0. Websites you may like';
+const EXCLUDED_DIRECTORY_MATCHERS = [
+    (name) => name === '0. Websites you may like',
+    (name) => name.toLowerCase().endsWith('.hls'),
+];
 const MAX_CONCURRENT_OPERATIONS = 50; // Limit concurrent file system operations
 
 // In-memory cache for directory results
 const directoryCache = new Map();
+
+// HLS output lives beside a source video as <video>.hls/. These directories
+// contain transport-stream segments, not course topics or lessons.
+function isExcludedDirectory(name) {
+    return EXCLUDED_DIRECTORY_MATCHERS.some((matches) => matches(name));
+}
 
 /**
  * Processes promises with concurrency limit
@@ -55,6 +64,24 @@ async function getDirectoryMtime(dirPath) {
         return stats.mtimeMs;
     } catch (err) {
         return 0;
+    }
+}
+
+/**
+ * Gets the best available creation timestamp for a course directory.
+ * @param {string} dirPath - Directory path
+ * @returns {Promise<string|null>} ISO timestamp or null when unavailable
+ */
+async function getDirectoryAddedAt(dirPath) {
+    try {
+        const stats = await fs.stat(dirPath);
+        const timestamp = stats.birthtimeMs || stats.ctimeMs || stats.mtimeMs;
+
+        if (!timestamp) return null;
+
+        return new Date(timestamp).toISOString();
+    } catch (err) {
+        return null;
     }
 }
 
@@ -117,7 +144,7 @@ async function collectTopicsRecursively(dirPath, relativePath = '', useCache = t
         const items = await fs.readdir(dirPath, { withFileTypes: true });
         const files = items.filter((item) => item.isFile()).map((item) => item.name);
         const subDirectories = items.filter(
-            (item) => item.isDirectory() && item.name !== EXCLUDED_DIRECTORY
+            (item) => item.isDirectory() && !isExcludedDirectory(item.name)
         );
 
         // Process files in current directory
@@ -172,7 +199,7 @@ async function processCourseTopics(coursePath, courseName, useCache = true) {
         const courseItems = await fs.readdir(coursePath, { withFileTypes: true });
         const files = courseItems.filter((item) => item.isFile()).map((item) => item.name);
         const subDirectories = courseItems.filter(
-            (item) => item.isDirectory() && item.name !== EXCLUDED_DIRECTORY
+            (item) => item.isDirectory() && !isExcludedDirectory(item.name)
         );
 
         // Case 1: No subdirectories (topicless course)
@@ -271,7 +298,7 @@ async function listDirectoriesWithTopics(
 
         // Filter to only course directories
         const courseDirectories = items.filter(
-            (item) => item.isDirectory() && item.name !== EXCLUDED_DIRECTORY
+            (item) => item.isDirectory() && !isExcludedDirectory(item.name)
         );
 
         // Process all courses with concurrency control
@@ -287,6 +314,7 @@ async function listDirectoriesWithTopics(
                     const cached = directoryCache.get(coursePath);
                     if (await isCacheValid(coursePath, cached)) {
                         topics = cached.data;
+                        const addedAt = await getDirectoryAddedAt(coursePath);
                         if (logCourseDetails) {
                             console.log(
                                 `processing course: ${courseName} topics found: ${topics.length} (cached)`
@@ -294,13 +322,18 @@ async function listDirectoriesWithTopics(
                         }
                         return {
                             name: courseName,
+                            addedAt,
                             topics,
                         };
                     }
                 }
 
                 // Not cached or cache invalid, process the course
-                topics = await processCourseTopics(coursePath, courseName, useCache);
+                const [processedTopics, addedAt] = await Promise.all([
+                    processCourseTopics(coursePath, courseName, useCache),
+                    getDirectoryAddedAt(coursePath),
+                ]);
+                topics = processedTopics;
 
                 // Cache the result
                 if (useCache) {
@@ -316,6 +349,7 @@ async function listDirectoriesWithTopics(
 
                 return {
                     name: courseName,
+                    addedAt,
                     topics,
                 };
             }

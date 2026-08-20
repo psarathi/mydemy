@@ -1,5 +1,30 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Multi-language audio
+
+Desktop browsers do not consistently expose the embedded audio tracks in an MP4.
+Generate HLS audio renditions for a video (or a course directory) to make the
+player's Audio & subtitles menu work consistently across Chrome, Safari, and
+mobile browsers:
+
+```bash
+node scripts/create-hls-audio-variants.js "/path/to/video.mp4"
+node scripts/create-hls-audio-variants.js "/path/to/course" --recursive
+node scripts/create-hls-audio-variants.js "/path/to/course" --recursive --force
+```
+
+The command requires `ffmpeg` and `ffprobe`. It writes a sibling
+`<video>.hls/master.m3u8` playlist and does not alter the source video.
+Use `--force` to regenerate existing HLS assets after changing their track
+metadata.
+
+Course refreshes skip HLS generation by default. Call `fetchCourses` with an
+explicit option when processing a newly uploaded course:
+
+```js
+await fetchCourses({coursesToProcess: uploadedCourses, generateHlsAudio: true});
+```
+
 ## Getting Started
 
 First, run the development server:

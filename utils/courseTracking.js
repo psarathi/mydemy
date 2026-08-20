@@ -413,6 +413,84 @@ export const getLessonAnnotations = (courseName, lessonPath) => {
     );
 };
 
+export const getMatchingNoteAnnotationsForCourse = (
+    course,
+    searchTermParts = [],
+    exactSearch = false,
+    annotationsOverride = null
+) => {
+    if (!course?.name || !searchTermParts.length) return [];
+
+    const store = annotationsOverride || readAnnotationStore();
+    const normalizedParts = searchTermParts.map((part) => part.toLowerCase());
+    const lessons =
+        course.topics?.flatMap((topic) =>
+            (topic.files || []).map((file) => ({
+                topicName: topic.name,
+                lessonName: file.name,
+                fileName: file.fileName || file.name,
+            }))
+        ) || [];
+
+    return Object.entries(store)
+        .filter(([key]) => key.startsWith(`${course.name}::`))
+        .flatMap(([key, annotations]) => {
+            const lessonPath = key.slice(`${course.name}::`.length);
+            const lessonMeta =
+                lessons.find((lesson) => lessonPath.endsWith(lesson.fileName)) ||
+                lessons.find((lesson) => lesson.lessonName === lessonPath) ||
+                {};
+
+            return (annotations || [])
+                .filter((annotation) => annotation.type === 'note')
+                .filter((annotation) => {
+                    const normalizedText = (annotation.text || '').toLowerCase();
+                    return exactSearch
+                        ? normalizedParts.every((part) =>
+                              normalizedText.split(/\s+/).includes(part)
+                          )
+                        : normalizedParts.some((part) =>
+                              normalizedText.includes(part)
+                          );
+                })
+                .map((annotation) => ({
+                    ...annotation,
+                    lessonPath,
+                    lessonName: lessonMeta.lessonName || lessonPath,
+                    topicName: lessonMeta.topicName || '',
+                    courseName: course.name,
+                }));
+        })
+        .sort((a, b) => {
+            const lessonComparison = a.lessonPath.localeCompare(b.lessonPath);
+            return lessonComparison || a.timeSeconds - b.timeSeconds;
+        });
+};
+
+export const getCourseAnnotationSummary = (courseName) => {
+    const store = readAnnotationStore();
+    const coursePrefix = `${courseName || 'unknown-course'}::`;
+
+    return Object.entries(store).reduce(
+        (summary, [key, annotations]) => {
+            if (!key.startsWith(coursePrefix) || !Array.isArray(annotations)) {
+                return summary;
+            }
+
+            annotations.forEach((annotation) => {
+                if (annotation.type === 'note') {
+                    summary.notes += 1;
+                } else if (annotation.type === 'bookmark') {
+                    summary.bookmarks += 1;
+                }
+            });
+
+            return summary;
+        },
+        {notes: 0, bookmarks: 0}
+    );
+};
+
 export const saveLessonAnnotation = (courseName, lessonPath, annotation) => {
     if (typeof window === 'undefined') return null;
     const store = readAnnotationStore();
@@ -432,6 +510,20 @@ export const saveLessonAnnotation = (courseName, lessonPath, annotation) => {
         createdAt: annotation.createdAt || now,
         updatedAt: now,
     };
+
+    if (saved.type === 'bookmark') {
+        const duplicateBookmark = existing.find(
+            (item) =>
+                item.id !== saved.id &&
+                item.type === 'bookmark' &&
+                Math.floor(Number(item.timeSeconds) || 0) === saved.timeSeconds
+        );
+
+        if (duplicateBookmark) {
+            return duplicateBookmark;
+        }
+    }
+
     store[key] = [
         ...existing.filter((item) => item.id !== saved.id),
         saved,
