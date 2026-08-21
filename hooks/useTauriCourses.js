@@ -15,6 +15,8 @@ export function useTauriCourses() {
     const [updateStatus, setUpdateStatus] = useState(null); // 'idle', 'checking', 'downloading', 'success', 'error'
     const [errorMessage, setErrorMessage] = useState(null);
     const [isUsingFallback, setIsUsingFallback] = useState(false);
+    const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+    const [refreshErrorMessage, setRefreshErrorMessage] = useState(null);
 
     // Get courses endpoint from environment
     const coursesEndpoint = process.env.NEXT_PUBLIC_COURSES_ENDPOINT;
@@ -31,6 +33,7 @@ export function useTauriCourses() {
             if (showUpdatingStatus) {
                 setUpdateStatus('checking');
             }
+            setRefreshErrorMessage(null);
 
             let loadedCourses = null;
 
@@ -80,6 +83,7 @@ export function useTauriCourses() {
 
                     setCourses(remoteCourses);
                     setIsUsingFallback(false);
+                    setLastUpdatedAt(new Date().toISOString());
                     setUpdateStatus('success');
 
                     setTimeout(() => {
@@ -88,8 +92,11 @@ export function useTauriCourses() {
                 } catch (remoteError) {
                     console.warn('Failed to fetch remote courses:', remoteError);
                     // Keep using the courses we already loaded
-                    setUpdateStatus('idle');
+                    setRefreshErrorMessage(remoteError.toString());
+                    setUpdateStatus('error');
                 }
+            } else if (loadedCourses && loadedCourses.length > 0) {
+                setLastUpdatedAt((current) => current || new Date().toISOString());
             }
 
             setIsLoading(false);
@@ -136,6 +143,8 @@ export function useTauriCourses() {
         isError,
         errorMessage,
         updateStatus,
+        lastUpdatedAt,
+        refreshErrorMessage,
         isUsingFallback,
         checkForUpdates, // Manual update trigger
         mutate: checkForUpdates, // Alias for compatibility with useCourses
