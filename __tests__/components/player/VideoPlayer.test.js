@@ -390,6 +390,77 @@ describe('VideoPlayer', () => {
         expect(video.play).toHaveBeenCalled();
     });
 
+    test('toggles play/pause with keyboard shortcuts', () => {
+        render(<VideoPlayer {...defaultProps} />);
+
+        const video = document.querySelector('video');
+        Object.defineProperty(video, 'paused', { value: true, writable: true });
+
+        fireEvent.keyDown(document, {key: 'k'});
+
+        expect(video.play).toHaveBeenCalled();
+    });
+
+    test('seeks with keyboard shortcuts', () => {
+        render(<VideoPlayer {...defaultProps} />);
+
+        const video = document.querySelector('video');
+        Object.defineProperty(video, 'currentTime', { value: 20, writable: true });
+        Object.defineProperty(video, 'duration', { value: 125, writable: true });
+
+        fireEvent.keyDown(document, {key: 'l'});
+        expect(video.currentTime).toBe(30);
+
+        fireEvent.keyDown(document, {key: 'j'});
+        expect(video.currentTime).toBe(20);
+    });
+
+    test('moves between lessons with keyboard shortcuts', () => {
+        const getPreviousVideo = jest.fn(() => ({
+            name: 'courses/react/setup/install.mp4',
+            subtitles: 'courses/react/setup/install.vtt',
+        }));
+        render(
+            <VideoPlayer
+                {...defaultProps}
+                getPreviousVideo={getPreviousVideo}
+            />
+        );
+
+        fireEvent.keyDown(document, {key: 'n'});
+        expect(mockGetNextVideo).toHaveBeenCalled();
+        expect(screen.getByText(/useState/i)).toBeInTheDocument();
+
+        fireEvent.keyDown(document, {key: 'p'});
+        expect(getPreviousVideo).toHaveBeenCalled();
+        expect(screen.getByText(/install/i)).toBeInTheDocument();
+    });
+
+    test('shows keyboard shortcuts help', () => {
+        render(<VideoPlayer {...defaultProps} />);
+
+        fireEvent.keyDown(document, {key: '?'});
+
+        expect(screen.getByRole('dialog', {name: 'Keyboard shortcuts'})).toBeInTheDocument();
+        expect(screen.getByText('Space / K')).toBeInTheDocument();
+    });
+
+    test('does not trigger player shortcuts from editable fields', () => {
+        render(
+            <>
+                <textarea aria-label='Draft note' />
+                <VideoPlayer {...defaultProps} />
+            </>
+        );
+
+        window.HTMLMediaElement.prototype.play.mockClear();
+        const textarea = screen.getByLabelText('Draft note');
+        textarea.focus();
+        fireEvent.keyDown(textarea, {key: 'k'});
+
+        expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    });
+
     test('pauses the video before capturing a note', async () => {
         const user = userEvent.setup();
         const onCaptureNote = jest.fn();

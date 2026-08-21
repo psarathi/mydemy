@@ -97,16 +97,29 @@ function CourseName({courseName}) {
     const noteTextAreaRef = useRef(null);
     const shouldFocusNoteDraftRef = useRef(false);
     const getNextVideo = () => {
-        setCurrentVideoFileIndex(
-            (currentVideoFileIndex) => currentVideoFileIndex + 1
-        );
-        if (currentVideoFileIndex >= videoFileList.length) {
-            setCurrentVideoFileIndex(0);
+        if (!videoFileList.length) {
+            return {name: '', subtitles: ''};
         }
-        let index =
+        const index =
             currentVideoFileIndex + 1 >= videoFileList.length
                 ? 0
                 : currentVideoFileIndex + 1;
+        setCurrentVideoFileIndex(index);
+        return {
+            name: videoFileList[index],
+            subtitles: videoFileList[index].replace(/\.[^.]+$/, '.vtt'),
+        };
+    };
+
+    const getPreviousVideo = () => {
+        if (!videoFileList.length) {
+            return {name: '', subtitles: ''};
+        }
+        const index =
+            currentVideoFileIndex - 1 < 0
+                ? videoFileList.length - 1
+                : currentVideoFileIndex - 1;
+        setCurrentVideoFileIndex(index);
         return {
             name: videoFileList[index],
             subtitles: videoFileList[index].replace(/\.[^.]+$/, '.vtt'),
@@ -238,6 +251,31 @@ function CourseName({courseName}) {
     const openSidebar = () => {
         setIsSidebarCollapsed(false);
     };
+
+    const toggleSidebar = () => {
+        setIsSidebarCollapsed((isCollapsed) => !isCollapsed);
+    };
+
+    useEffect(() => {
+        const isEditableTarget = (target) =>
+            target?.isContentEditable ||
+            ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName);
+
+        const handleKeyDown = (event) => {
+            if (isEditableTarget(event.target)) {
+                return;
+            }
+            if (event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                toggleSidebar();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     useEffect(() => {
         if (!noteDraft || !shouldFocusNoteDraftRef.current) {
@@ -915,6 +953,7 @@ function CourseName({courseName}) {
                         videoFile={videoFile}
                         subtitlesFile={subtitlesFile}
                         getNextVideo={getNextVideo}
+                        getPreviousVideo={getPreviousVideo}
                         startTime={activeLessonProgress?.currentTime || 0}
                         onProgress={handleVideoProgress}
                         onCaptureBookmark={captureBookmark}
