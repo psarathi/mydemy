@@ -15,8 +15,11 @@ import {
     deleteLessonAnnotation,
     saveLessonProgress,
     getCourseProgressSummary,
+    getCourseReviewSchedule,
+    getDueCourseReviews,
     getCourseResumeUrl,
     getLessonKey,
+    markCourseReviewed,
     formatProgressTime,
     getCourseCollections,
     saveCourseCollection,
@@ -390,6 +393,118 @@ describe('courseTracking utilities', () => {
             const result = isFavorite('Test Course');
 
             expect(result).toBe(false);
+        });
+    });
+
+    describe('course review schedule', () => {
+        const courseWithLessons = {
+            name: 'React Basics',
+            topics: [
+                {
+                    name: 'Intro',
+                    files: [
+                        {name: 'Lesson 1'},
+                        {name: 'Lesson 2'},
+                    ],
+                },
+            ],
+        };
+
+        test('returns courses due for review from completed lesson progress', () => {
+            const progress = {
+                'React Basics::Intro::Lesson 1': {
+                    courseName: 'React Basics',
+                    topicName: 'Intro',
+                    lessonName: 'Lesson 1',
+                    completed: true,
+                    updatedAt: '2026-08-01T12:00:00.000Z',
+                },
+            };
+
+            const dueReviews = getDueCourseReviews(
+                [courseWithLessons],
+                progress,
+                {},
+                '2026-08-03T12:00:00.000Z'
+            );
+
+            expect(dueReviews).toEqual([
+                expect.objectContaining({
+                    courseName: 'React Basics',
+                    completedLessons: 1,
+                    totalLessons: 2,
+                    daysOverdue: 1,
+                    notificationReadyAt: '2026-08-02T00:00:00.000Z',
+                }),
+            ]);
+        });
+
+        test('excludes courses before their next review date', () => {
+            const progress = {
+                'React Basics::Intro::Lesson 1': {
+                    courseName: 'React Basics',
+                    topicName: 'Intro',
+                    lessonName: 'Lesson 1',
+                    completed: true,
+                    updatedAt: '2026-08-01T12:00:00.000Z',
+                },
+            };
+
+            expect(
+                getDueCourseReviews(
+                    [courseWithLessons],
+                    progress,
+                    {},
+                    '2026-08-01T12:00:00.000Z'
+                )
+            ).toEqual([]);
+        });
+
+        test('marks a course reviewed and schedules the next interval', () => {
+            localStorageMock.getItem.mockReturnValue('{}');
+
+            const reviewed = markCourseReviewed(
+                'React Basics',
+                '2026-08-03T12:00:00.000Z'
+            );
+
+            expect(reviewed).toEqual(
+                expect.objectContaining({
+                    courseName: 'React Basics',
+                    reviewCount: 1,
+                    nextReviewAt: '2026-08-04T00:00:00.000Z',
+                })
+            );
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(
+                'mydemyReviewSchedule:v1',
+                expect.stringContaining('React Basics')
+            );
+            expect(mockDispatchEvent).toHaveBeenCalledWith(
+                expect.objectContaining({type: 'courseReviewScheduleUpdated'})
+            );
+        });
+
+        test('normalizes stored review schedule entries', () => {
+            localStorageMock.getItem.mockReturnValue(
+                JSON.stringify({
+                    'React Basics': {
+                        lastReviewedAt: '2026-08-03T12:00:00.000Z',
+                        reviewCount: 2,
+                        nextReviewAt: '2026-08-06T00:00:00.000Z',
+                    },
+                    Empty: {},
+                })
+            );
+
+            expect(getCourseReviewSchedule()).toEqual({
+                'React Basics': {
+                    courseName: 'React Basics',
+                    lastReviewedAt: '2026-08-03T12:00:00.000Z',
+                    reviewCount: 2,
+                    nextReviewAt: '2026-08-06T00:00:00.000Z',
+                    source: 'manual',
+                },
+            });
         });
     });
 

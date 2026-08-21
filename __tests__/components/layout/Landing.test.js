@@ -67,8 +67,10 @@ jest.mock('../../../utils/courseTracking', () => ({
         percentComplete: 0,
         activeLesson: null,
     })),
+    getDueCourseReviews: jest.fn(() => []),
     getMatchingNoteAnnotationsForCourse: jest.fn(() => []),
     getLessonProgress: jest.fn(() => ({})),
+    markCourseReviewed: jest.fn(),
     pinCourseCollection: jest.fn(),
     removeCourseFromCollection: jest.fn(),
 }));
