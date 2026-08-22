@@ -6,6 +6,8 @@ const LEGACY_LESSON_PROGRESS_KEY = 'lessonProgress';
 const LESSON_PROGRESS_KEY = 'mydemyLessonProgress:v1';
 const ANNOTATIONS_KEY = 'mydemyLessonAnnotations:v1';
 const COURSE_COLLECTIONS_KEY = 'mydemyCourseCollections:v1';
+const REVIEW_SCHEDULE_KEY = 'mydemyReviewSchedule:v1';
+const DEFAULT_REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30, 60];
 
 const readJsonArray = (key) => {
     if (typeof window === 'undefined') return [];
@@ -48,6 +50,29 @@ const writeCollectionsStore = (collections) => {
             detail: {collections},
         })
     );
+};
+
+const readReviewScheduleStore = () => readJsonObject(REVIEW_SCHEDULE_KEY);
+
+const getDateOnlyTimestamp = (dateLike) => {
+    const date = new Date(dateLike);
+    if (Number.isNaN(date.getTime())) return null;
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+};
+
+const addDaysIso = (dateLike, days) => {
+    const timestamp = getDateOnlyTimestamp(dateLike);
+    if (timestamp === null) return null;
+    const date = new Date(timestamp);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString();
+};
+
+const getDaysBetween = (fromDate, toDate) => {
+    const fromTimestamp = getDateOnlyTimestamp(fromDate);
+    const toTimestamp = getDateOnlyTimestamp(toDate);
+    if (fromTimestamp === null || toTimestamp === null) return 0;
+    return Math.floor((toTimestamp - fromTimestamp) / 86400000);
 };
 
 export const getLessonKey = (courseName, topicName, lessonName) =>
@@ -220,6 +245,104 @@ export const getCourseProgressSummary = (course, progressOverride = null) => {
             : 0,
         activeLesson,
     };
+};
+
+export const getCourseReviewSchedule = () => {
+    const schedule = readReviewScheduleStore();
+    return Object.entries(schedule).reduce((normalized, [courseName, entry]) => {
+        if (!courseName || !entry?.lastReviewedAt) return normalized;
+
+        normalized[courseName] = {
+            courseName,
+            lastReviewedAt: entry.lastReviewedAt,
+            reviewCount: Math.max(Number(entry.reviewCount) || 0, 0),
+            nextReviewAt: entry.nextReviewAt || null,
+            source: entry.source || 'manual',
+        };
+        return normalized;
+    }, {});
+};
+
+export const markCourseReviewed = (courseName, reviewedAt = new Date().toISOString()) => {
+    if (typeof window === 'undefined' || !courseName) return null;
+
+    const schedule = getCourseReviewSchedule();
+    const existing = schedule[courseName] || {};
+    const reviewCount = (Number(existing.reviewCount) || 0) + 1;
+    const interval =
+        DEFAULT_REVIEW_INTERVAL_DAYS[
+            Math.min(reviewCount - 1, DEFAULT_REVIEW_INTERVAL_DAYS.length - 1)
+        ];
+    const entry = {
+        courseName,
+        lastReviewedAt: reviewedAt,
+        reviewCount,
+        nextReviewAt: addDaysIso(reviewedAt, interval),
+        source: 'manual',
+    };
+
+    localStorage.setItem(
+        getUserScopedStorageKey(REVIEW_SCHEDULE_KEY),
+        JSON.stringify({...schedule, [courseName]: entry})
+    );
+    window.dispatchEvent(
+        new CustomEvent('courseReviewScheduleUpdated', {
+            detail: {courseName, schedule: {...schedule, [courseName]: entry}},
+        })
+    );
+    return entry;
+};
+
+export const getDueCourseReviews = (
+    courses = [],
+    progressOverride = null,
+    scheduleOverride = null,
+    now = new Date().toISOString()
+) => {
+    const progress = progressOverride || getLessonProgress();
+    const schedule = scheduleOverride || getCourseReviewSchedule();
+    const nowTimestamp = getDateOnlyTimestamp(now);
+    if (nowTimestamp === null) return [];
+
+    return courses
+        .map((course) => {
+            const summary = getCourseProgressSummary(course, progress);
+            if (!summary.totalLessons || !summary.completedLessons) return null;
+
+            const scheduleEntry = schedule[course.name] || null;
+            const lastActivityAt =
+                scheduleEntry?.lastReviewedAt || summary.activeLesson?.updatedAt;
+            if (!lastActivityAt) return null;
+
+            const intervalIndex = Math.min(
+                Math.max(summary.completedLessons - 1, 0),
+                DEFAULT_REVIEW_INTERVAL_DAYS.length - 1
+            );
+            const nextReviewAt =
+                scheduleEntry?.nextReviewAt ||
+                addDaysIso(lastActivityAt, DEFAULT_REVIEW_INTERVAL_DAYS[intervalIndex]);
+            const nextTimestamp = getDateOnlyTimestamp(nextReviewAt);
+            if (nextTimestamp === null || nextTimestamp > nowTimestamp) return null;
+
+            return {
+                course,
+                courseName: course.name,
+                completedLessons: summary.completedLessons,
+                totalLessons: summary.totalLessons,
+                percentComplete: summary.percentComplete,
+                activeLesson: summary.activeLesson,
+                lastReviewedAt: scheduleEntry?.lastReviewedAt || null,
+                nextReviewAt,
+                daysOverdue: Math.max(getDaysBetween(nextReviewAt, now), 0),
+                notificationReadyAt: nextReviewAt,
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            const dueComparison =
+                getDateOnlyTimestamp(a.nextReviewAt) - getDateOnlyTimestamp(b.nextReviewAt);
+            return dueComparison || a.courseName.localeCompare(b.courseName);
+        });
 };
 
 export const getCourseResumeUrl = (courseName, activeLesson) => {

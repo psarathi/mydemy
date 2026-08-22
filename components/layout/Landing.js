@@ -14,8 +14,10 @@ import {
     getCourseAnnotationSummary,
     getCourseResumeUrl,
     getCourseProgressSummary,
+    getDueCourseReviews,
     getMatchingNoteAnnotationsForCourse,
     getLessonProgress,
+    markCourseReviewed,
     pinCourseCollection,
     removeCourseFromCollection,
 } from '../../utils/courseTracking';
@@ -121,6 +123,7 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const [allTagCounts, setAllTagCounts] = useState([]);
     const [collections, setCollections] = useState([]);
     const [courseAnnotationSummaries, setCourseAnnotationSummaries] = useState({});
+    const [dueReviews, setDueReviews] = useState([]);
     const [activeCollectionId, setActiveCollectionId] = useState('');
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
@@ -248,6 +251,20 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
             window.removeEventListener('lessonProgressUpdated', handleLessonProgressUpdated);
         };
     }, []);
+
+    useEffect(() => {
+        const updateDueReviews = () => {
+            setDueReviews(getDueCourseReviews(courses, getLessonProgress()));
+        };
+
+        updateDueReviews();
+        window.addEventListener('lessonProgressUpdated', updateDueReviews);
+        window.addEventListener('courseReviewScheduleUpdated', updateDueReviews);
+        return () => {
+            window.removeEventListener('lessonProgressUpdated', updateDueReviews);
+            window.removeEventListener('courseReviewScheduleUpdated', updateDueReviews);
+        };
+    }, [courses]);
 
     useEffect(() => {
         const handleLessonAnnotationsUpdated = () => {
@@ -552,6 +569,11 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
         }
     };
 
+    const handleCourseReviewed = (courseName) => {
+        markCourseReviewed(courseName);
+        setDueReviews(getDueCourseReviews(courses, getLessonProgress()));
+    };
+
     if (isLoading) {
         return (
             <div className='modern-landing-container'>
@@ -741,6 +763,47 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                                     <span>{collection.name}</span>
                                     <span className='collection-filter-count'>{collection.courses.length}</span>
                                 </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {dueReviews.length > 0 && (
+                    <div className='review-dashboard'>
+                        <div className='review-dashboard-summary'>
+                            <span className='review-dashboard-label'>Due for review</span>
+                            <strong>{dueReviews.length}</strong>
+                            <span>{dueReviews.length === 1 ? 'course' : 'courses'}</span>
+                        </div>
+                        <div className='review-list'>
+                            {dueReviews.slice(0, 4).map((review) => (
+                                <div key={review.courseName} className='review-item'>
+                                    <Link
+                                        passHref
+                                        href={getCourseResumeUrl(
+                                            review.courseName,
+                                            review.activeLesson
+                                        )}
+                                        className='review-link'
+                                        onClick={() => handleCourseClick(review.course)}
+                                    >
+                                        <span className='review-course-name'>
+                                            {review.courseName}
+                                        </span>
+                                        <span className='review-meta'>
+                                            {review.daysOverdue > 0
+                                                ? `${review.daysOverdue}d overdue`
+                                                : 'Due today'}
+                                        </span>
+                                    </Link>
+                                    <button
+                                        className='review-complete-btn'
+                                        type='button'
+                                        onClick={() => handleCourseReviewed(review.courseName)}
+                                    >
+                                        Reviewed
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </div>
