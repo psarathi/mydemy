@@ -83,6 +83,18 @@ export const sortCoursesByAddedDateDesc = (courses) =>
         return addedDateComparison || a.name.localeCompare(b.name);
     });
 
+export const formatRefreshTime = (updatedAt) => {
+    if (!updatedAt) return '';
+
+    const date = new Date(updatedAt);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return new Intl.DateTimeFormat(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+    }).format(date);
+};
+
 function Landing({search_term = '', exact, refreshCoursesRef}) {
     exact = exact?.toLowerCase() === 'true';
 
@@ -115,7 +127,28 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
     const searchField = useRef(null);
     const autocompleteRef = useRef(null);
     const {data: session} = useSession();
-    const {courses, isLoading, mutate} = useCourses();
+    const {
+        courses,
+        isLoading,
+        isError,
+        errorMessage,
+        updateStatus,
+        lastUpdatedAt,
+        refreshErrorMessage,
+        isUsingFallback,
+        mutate,
+    } = useCourses();
+    const isRefreshing =
+        updateStatus === 'checking' || updateStatus === 'downloading';
+    const refreshMessage = (() => {
+        if (isRefreshing) return 'Refreshing library...';
+        if (updateStatus === 'success') return 'Library refreshed';
+        if (updateStatus === 'error' || isError) {
+            return refreshErrorMessage || errorMessage || 'Refresh failed';
+        }
+        if (lastUpdatedAt) return `Last updated ${formatRefreshTime(lastUpdatedAt)}`;
+        return 'Refresh status unavailable';
+    })();
 
     const searchTermParts = React.useMemo(
         () => getSearchTermParts(searchTerm),
@@ -717,6 +750,24 @@ function Landing({search_term = '', exact, refreshCoursesRef}) {
                     <div>
                         <h1>Courses</h1>
                         <span className='course-count'>{courseList.length} available</span>
+                    </div>
+                    <div
+                        className={`course-refresh-status ${updateStatus === 'error' || isError ? 'error' : ''}`}
+                        aria-live='polite'
+                    >
+                        <span className={`refresh-status-dot ${isRefreshing ? 'active' : ''}`} />
+                        <span>{refreshMessage}</span>
+                        {isUsingFallback && (
+                            <span className='refresh-fallback-label'>Using bundled library</span>
+                        )}
+                        <button
+                            className='course-refresh-btn'
+                            type='button'
+                            onClick={() => mutate?.()}
+                            disabled={isRefreshing}
+                        >
+                            {isRefreshing ? 'Refreshing' : 'Retry'}
+                        </button>
                     </div>
                     {courseList.length > 0 && (
                         <div className='bulk-tag-container'>

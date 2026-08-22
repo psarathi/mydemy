@@ -1,4 +1,5 @@
 import useSWR from 'swr';
+import {useMemo} from 'react';
 import { useTauriCourses } from './useTauriCourses';
 
 const fetcher = async (url) => {
@@ -25,7 +26,7 @@ export function useCourses() {
     const remoteEndpoint = process.env.NEXT_PUBLIC_COURSES_ENDPOINT;
     const endpoint = remoteEndpoint || '/api/courses';
 
-    const { data, error, isLoading, mutate } = useSWR(
+    const { data, error, isLoading, isValidating, mutate } = useSWR(
         endpoint,
         fetcher,
         {
@@ -39,12 +40,18 @@ export function useCourses() {
         }
     );
 
+    const lastUpdatedAt = useMemo(
+        () => (data ? new Date().toISOString() : null),
+        [data]
+    );
+
     return {
         courses: data || [],
         isLoading,
         isError: error,
         errorMessage: error?.message,
-        updateStatus: 'idle',
+        updateStatus: error ? 'error' : isValidating ? 'checking' : 'idle',
+        lastUpdatedAt,
         isUsingFallback: false,
         mutate, // Expose mutate to manually trigger revalidation
         checkForUpdates: mutate, // Alias for consistency with Tauri hook

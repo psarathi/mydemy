@@ -123,6 +123,10 @@ jest.mock('../../../hooks/useCourses', () => ({
     useCourses: jest.fn(() => ({
         courses: mockCourses,
         isLoading: false,
+        isError: false,
+        updateStatus: 'idle',
+        lastUpdatedAt: '2026-08-08T12:30:00.000Z',
+        isUsingFallback: false,
         mutate: jest.fn(),
     })),
 }));
@@ -133,6 +137,7 @@ const mockGetMatchingNoteAnnotationsForCourse =
     require('../../../utils/courseTracking').getMatchingNoteAnnotationsForCourse;
 const mockGetCourseAnnotationSummary =
     require('../../../utils/courseTracking').getCourseAnnotationSummary;
+const mockUseCourses = require('../../../hooks/useCourses').useCourses;
 
 describe('Landing', () => {
     const mockSession = {
@@ -149,6 +154,15 @@ describe('Landing', () => {
                 ? {notes: 2, bookmarks: 1}
                 : {notes: 0, bookmarks: 0}
         );
+        mockUseCourses.mockReturnValue({
+            courses: mockCourses,
+            isLoading: false,
+            isError: false,
+            updateStatus: 'idle',
+            lastUpdatedAt: '2026-08-08T12:30:00.000Z',
+            isUsingFallback: false,
+            mutate: jest.fn(),
+        });
     });
 
     test('renders landing page with basic components', () => {
@@ -291,6 +305,47 @@ describe('Landing', () => {
         render(<Landing />);
 
         expect(screen.getByText(/Added Aug 8, 2026/)).toBeInTheDocument();
+    });
+
+    test('displays library refresh status and retries manually', async () => {
+        const mutate = jest.fn();
+        const user = userEvent.setup();
+        mockUseCourses.mockReturnValue({
+            courses: mockCourses,
+            isLoading: false,
+            isError: false,
+            updateStatus: 'idle',
+            lastUpdatedAt: '2026-08-08T12:30:00.000Z',
+            isUsingFallback: true,
+            mutate,
+        });
+
+        render(<Landing />);
+
+        expect(screen.getByText(/Last updated/)).toBeInTheDocument();
+        expect(screen.getByText('Using bundled library')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', {name: 'Retry'}));
+
+        expect(mutate).toHaveBeenCalled();
+    });
+
+    test('displays refresh errors', () => {
+        mockUseCourses.mockReturnValue({
+            courses: mockCourses,
+            isLoading: false,
+            isError: true,
+            errorMessage: 'Failed to fetch courses',
+            updateStatus: 'error',
+            lastUpdatedAt: null,
+            refreshErrorMessage: 'Network error',
+            isUsingFallback: false,
+            mutate: jest.fn(),
+        });
+
+        render(<Landing />);
+
+        expect(screen.getByText('Network error')).toBeInTheDocument();
     });
 
     test('displays note and bookmark counts on course cards', () => {

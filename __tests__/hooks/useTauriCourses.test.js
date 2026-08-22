@@ -99,12 +99,6 @@ describe('useTauriCourses', () => {
 
             const { result } = renderHook(() => useTauriCourses());
 
-            // Wait for initial load
-            await waitFor(() => {
-                expect(result.current.courses).toEqual(mockCachedCourses);
-            });
-
-            // Wait for remote update
             await waitFor(() => {
                 expect(result.current.courses).toEqual(mockRemoteCourses);
             });
@@ -131,7 +125,8 @@ describe('useTauriCourses', () => {
             });
 
             expect(result.current.courses).toEqual(mockCachedCourses);
-            expect(result.current.updateStatus).toBe('idle');
+            expect(result.current.updateStatus).toBe('error');
+            expect(result.current.refreshErrorMessage).toContain('Network error');
         });
     });
 
@@ -149,7 +144,7 @@ describe('useTauriCourses', () => {
             const { result } = renderHook(() => useTauriCourses());
 
             await waitFor(() => {
-                expect(result.current.courses).toEqual(mockCachedCourses);
+                expect(result.current.courses).toEqual(mockUpdatedCourses);
             });
 
             // Clear previous calls
@@ -168,6 +163,7 @@ describe('useTauriCourses', () => {
             });
 
             expect(result.current.courses).toEqual(mockUpdatedCourses);
+            expect(result.current.lastUpdatedAt).toBeTruthy();
         });
     });
 
